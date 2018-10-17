@@ -2,6 +2,7 @@ package com.jointsky.edps.spider.config;
 
 import com.jointsky.edps.spider.common.UrlType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -38,6 +39,16 @@ public class PageConfig {
      * 静态字段
      */
     private List<FieldSelectConfig> staticFields;
+
+    public PageConfig(UrlType urlType) {
+        this.urlType = urlType;
+        this.jsonType = false;
+        this.targetUrl = false;
+        this.targetSelect = new ArrayList<>();
+        this.helpSelect = new ArrayList<>();
+        this.fieldSelect = new ArrayList<>();
+        this.staticFields = new ArrayList<>();
+    }
 
     public UrlType getUrlType() {
         return urlType;

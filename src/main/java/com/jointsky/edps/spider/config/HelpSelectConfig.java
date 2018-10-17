@@ -2,6 +2,7 @@ package com.jointsky.edps.spider.config;
 
 import com.jointsky.edps.spider.common.SelectType;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -14,6 +15,12 @@ public class HelpSelectConfig extends UrlSelectConfig{
     private SelectType totalSelectType;
     private int pageSize;
     private Map<String,Map<String, SelectType>> pathCombineMap;
+
+    public HelpSelectConfig(boolean jsonType, String configText, SelectType selectType) {
+        super(jsonType, configText, selectType);
+        this.pathCombineMap = new HashMap<>();
+    }
+
 
     public String getTotalSelect() {
         return totalSelect;

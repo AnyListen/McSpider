@@ -3,6 +3,7 @@ package com.jointsky.edps.spider.config;
 import us.codecraft.webmagic.Site;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +27,7 @@ public class SiteConfig {
         this.siteId = siteId;
         this.siteName = siteName;
         this.pipelines = new ArrayList<>();
+        this.allPageConfig = new HashMap<>();
         this.downloader = "us.codecraft.webmagic.downloader.HttpClientDownloader";
         this.scheduler = "us.codecraft.webmagic.scheduler.PriorityScheduler";
     }
