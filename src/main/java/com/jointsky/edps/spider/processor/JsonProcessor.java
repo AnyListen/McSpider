@@ -1,5 +1,7 @@
 package com.jointsky.edps.spider.processor;
 
+import com.jointsky.edps.spider.config.SiteConfig;
+import com.jointsky.edps.spider.utils.ProcessorUtils;
 import us.codecraft.webmagic.Page;
 import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.processor.PageProcessor;
@@ -12,9 +14,11 @@ import us.codecraft.webmagic.processor.PageProcessor;
 public class JsonProcessor implements PageProcessor {
 
     private Site site;
+    private SiteConfig siteConfig;
 
-    public JsonProcessor(Site site){
-        this.site = site;
+    public JsonProcessor(SiteConfig siteConfig) {
+        this.siteConfig = siteConfig;
+        this.site = ProcessorUtils.buildSite(this.siteConfig);
     }
 
     @Override
