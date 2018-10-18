@@ -2,9 +2,8 @@ package com.jointsky.edps.spider.processor;
 
 import cn.hutool.log.StaticLog;
 import com.jointsky.edps.spider.common.SysConstant;
-import com.jointsky.edps.spider.common.UrlType;
 import com.jointsky.edps.spider.config.SiteConfig;
-import com.jointsky.edps.spider.utils.ProcessorUtils;
+import com.jointsky.edps.spider.utils.SpiderUtils;
 import org.junit.Test;
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Spider;
@@ -31,18 +30,18 @@ public class JsonProcessorTest {
         List<Request> requestList = new ArrayList<>();
         startUrls.forEach((k,v)->{
             Request request = new Request(k);
-            request.putExtra(SysConstant.URL_TYPE, UrlType.START);
+            request.putExtra(SysConstant.URL_ID, SysConstant.START_URL);
             requestList.add(request);
         });
 
-        Spider.create(new JsonProcessor(siteConfig))
-                .setDownloader(ProcessorUtils.buildDownloader(siteConfig))
-                .setPipelines(ProcessorUtils.buildPipelines(siteConfig))
-                .setScheduler(ProcessorUtils.buildScheduler(siteConfig))
+        Spider spider = Spider.create(new JsonProcessor(siteConfig))
+                .setDownloader(SpiderUtils.buildDownloader(siteConfig))
+                .setPipelines(SpiderUtils.buildPipelines(siteConfig))
+                .setScheduler(SpiderUtils.buildScheduler(siteConfig))
                 .startRequest(requestList)
                 .setUUID(siteConfig.getSiteId())
                 .thread(siteConfig.getThreadNum())
-                .setExitWhenComplete(siteConfig.isExitWhenComplete())
-                .run();
+                .setExitWhenComplete(siteConfig.isExitWhenComplete());
+        spider.runAsync();
     }
 }

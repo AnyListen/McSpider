@@ -1,5 +1,7 @@
 package com.jointsky.edps.spider.config;
 
+import com.jointsky.edps.spider.common.SysConstant;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -195,6 +197,7 @@ public class SiteConfig {
 
     public void setStartPage(StartConfig startPage) {
         this.startPage = startPage;
+        this.allPageConfig.put(SysConstant.START_URL, startPage);
     }
 
     public int getThreadNum() {

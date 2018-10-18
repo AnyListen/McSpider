@@ -11,6 +11,7 @@ public class FieldSelectConfig {
     private String filedName;
     private String configText;
     private SelectType selectType;
+    private int group = 0;
 
     public FieldSelectConfig(){}
 
@@ -18,6 +19,13 @@ public class FieldSelectConfig {
         this.filedName = filedName;
         this.configText = configText;
         this.selectType = selectType;
+    }
+
+    public FieldSelectConfig(String filedName, String configText, SelectType selectType, int group) {
+        this.filedName = filedName;
+        this.configText = configText;
+        this.selectType = selectType;
+        this.group = group;
     }
 
     public String getFiledName() {
@@ -42,5 +50,13 @@ public class FieldSelectConfig {
 
     public void setSelectType(SelectType selectType) {
         this.selectType = selectType;
+    }
+
+    public int getGroup() {
+        return group;
+    }
+
+    public void setGroup(int group) {
+        this.group = group;
     }
 }

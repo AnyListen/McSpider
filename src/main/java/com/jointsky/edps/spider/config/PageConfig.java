@@ -1,7 +1,5 @@
 package com.jointsky.edps.spider.config;
 
-import com.jointsky.edps.spider.common.UrlType;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,9 +10,12 @@ import java.util.List;
  */
 public class PageConfig {
     /**
+     * 页面配置ID
+     */
+    private String id;
+    /**
      * URL 类型
      */
-    private UrlType urlType;
     /**
      * 结果是否为 JSON
      */
@@ -39,23 +40,19 @@ public class PageConfig {
      * 静态字段
      */
     private List<FieldSelectConfig> staticFields;
+    /**
+     * 新页面的配置
+     */
+    private PageConfig nextPage;
 
-    public PageConfig(UrlType urlType) {
-        this.urlType = urlType;
+    public PageConfig(String id) {
+        this.id = id;
         this.jsonType = false;
         this.targetUrl = false;
         this.targetSelect = new ArrayList<>();
         this.helpSelect = new ArrayList<>();
         this.fieldSelect = new ArrayList<>();
         this.staticFields = new ArrayList<>();
-    }
-
-    public UrlType getUrlType() {
-        return urlType;
-    }
-
-    public void setUrlType(UrlType urlType) {
-        this.urlType = urlType;
     }
 
     public boolean isJsonType() {
@@ -104,5 +101,21 @@ public class PageConfig {
 
     public void setStaticFields(List<FieldSelectConfig> staticFields) {
         this.staticFields = staticFields;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public PageConfig getNextPage() {
+        return nextPage;
+    }
+
+    public void setNextPage(PageConfig nextPage) {
+        this.nextPage = nextPage;
     }
 }

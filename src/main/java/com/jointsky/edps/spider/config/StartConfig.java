@@ -1,6 +1,6 @@
 package com.jointsky.edps.spider.config;
 
-import com.jointsky.edps.spider.common.UrlType;
+import com.jointsky.edps.spider.common.SysConstant;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -15,7 +15,7 @@ public class StartConfig extends PageConfig{
     private Map<String, Object> urls;
 
     public StartConfig(){
-        super(UrlType.START);
+        super(SysConstant.START_URL);
         this.urls = new LinkedHashMap<>();
     }
 

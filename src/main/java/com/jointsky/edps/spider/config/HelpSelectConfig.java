@@ -2,8 +2,8 @@ package com.jointsky.edps.spider.config;
 
 import com.jointsky.edps.spider.common.SelectType;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * edps-spider
@@ -11,31 +11,13 @@ import java.util.Map;
  * Created by hezl on 2018-10-17.
  */
 public class HelpSelectConfig extends UrlSelectConfig{
-    private String totalSelect;
-    private SelectType totalSelectType;
-    private int pageSize;
-    private Map<String,Map<String, SelectType>> pathCombineMap;
+    private int pageSize = 20;
+    private FieldSelectConfig totalFieldSelect;
+    private List<FieldSelectConfig> pathCombineMap;
 
     public HelpSelectConfig(boolean jsonType, String configText, SelectType selectType) {
         super(jsonType, configText, selectType);
-        this.pathCombineMap = new HashMap<>();
-    }
-
-
-    public String getTotalSelect() {
-        return totalSelect;
-    }
-
-    public void setTotalSelect(String totalSelect) {
-        this.totalSelect = totalSelect;
-    }
-
-    public SelectType getTotalSelectType() {
-        return totalSelectType;
-    }
-
-    public void setTotalSelectType(SelectType totalSelectType) {
-        this.totalSelectType = totalSelectType;
+        this.pathCombineMap = new ArrayList<>();
     }
 
     public int getPageSize() {
@@ -46,11 +28,19 @@ public class HelpSelectConfig extends UrlSelectConfig{
         this.pageSize = pageSize;
     }
 
-    public Map<String, Map<String, SelectType>> getPathCombineMap() {
+    public List<FieldSelectConfig> getPathCombineMap() {
         return pathCombineMap;
     }
 
-    public void setPathCombineMap(Map<String, Map<String, SelectType>> pathCombineMap) {
+    public void setPathCombineMap(List<FieldSelectConfig> pathCombineMap) {
         this.pathCombineMap = pathCombineMap;
+    }
+
+    public FieldSelectConfig getTotalFieldSelect() {
+        return totalFieldSelect;
+    }
+
+    public void setTotalFieldSelect(FieldSelectConfig totalFieldSelect) {
+        this.totalFieldSelect = totalFieldSelect;
     }
 }

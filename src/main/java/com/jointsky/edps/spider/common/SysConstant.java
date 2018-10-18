@@ -6,5 +6,6 @@ package com.jointsky.edps.spider.common;
  * Created by hezl on 2018-10-17.
  */
 public class SysConstant {
-    public static final String URL_TYPE = "URL_TYPE";
+    public static final String START_URL = "START_URL";
+    public static final String URL_ID = "URL_ID";
 }
