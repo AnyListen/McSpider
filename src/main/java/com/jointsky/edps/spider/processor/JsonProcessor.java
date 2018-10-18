@@ -17,6 +17,7 @@ import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.processor.PageProcessor;
 import us.codecraft.webmagic.selector.Html;
+import us.codecraft.webmagic.selector.Json;
 import us.codecraft.webmagic.selector.Selectable;
 
 import java.util.ArrayList;
@@ -61,8 +62,10 @@ public class JsonProcessor implements PageProcessor {
         if (helpSelect == null || helpSelect.size() <= 0){
             return;
         }
+        PageConfig nextPage = pageConfig.getNextPage();
+        String configId = SecureUtil.md5(page.getRequest().getUrl()) + nextPage.getId();
         if (pageConfig.isJsonType()){
-
+            Json json = page.getJson();
         }
         else {
             Html pageHtml = page.getHtml();
@@ -75,13 +78,12 @@ public class JsonProcessor implements PageProcessor {
                     newStaticFields.add(newFiled);
                 }
             });
-            PageConfig nextPage = pageConfig.getNextPage();
             nextPage.getStaticFields().addAll(newStaticFields);
-            String configId = SecureUtil.md5(page.getRequest().getUrl()) + nextPage.getId();
+            this.siteConfig.getAllPageConfig().put(configId, nextPage);
             Selectable htmlLinks = pageHtml.links();
             helpSelect.forEach(hConfig -> {
                 SelectType selectType = hConfig.getSelectType();
-                List<String> helpLinks;
+                List<String> helpLinks = new ArrayList<>();
                 switch (selectType) {
                     case CSS:
                         helpLinks = htmlLinks.$(hConfig.getConfigText()).all();
@@ -93,58 +95,55 @@ public class JsonProcessor implements PageProcessor {
                         helpLinks = htmlLinks.xpath(hConfig.getConfigText()).all();
                         break;
                     case JPATH:
-                        helpLinks = page.getJson().jsonPath(hConfig.getConfigText()).all();
+                        helpLinks = htmlLinks.jsonPath(hConfig.getConfigText()).all();
                         break;
                     case CUSTOM:
-                        //?userId={uid}&page={#PAGE#}&size={#LIMIT#}&offset={#OFFSET#}
-                        String customText = hConfig.getConfigText();
-                        List<FieldSelectConfig> pathCombineMap = hConfig.getPathCombineMap();
-                        for (FieldSelectConfig fieldConfig : pathCombineMap) {
-                            Selectable val = ProcessorUtils.getSelectVal(pageHtml, fieldConfig);
-                            if (val == null){
-                                continue;
-                            }
-                            customText = customText.replaceAll("{\\s*" + fieldConfig.getFiledName() + "\\s*}", val.get());
-                        }
-                        Selectable totalVal = ProcessorUtils.getSelectVal(pageHtml, hConfig.getTotalFieldSelect());
-                        helpLinks = new ArrayList<>();
-                        if(totalVal != null){
-                            String tVal = totalVal.get();
-                            if (StrUtil.isNotBlank(tVal) && tVal.matches("^\\d+$")){
-                                long total = Long.parseLong(tVal);
-                                long pageNum = total/ hConfig.getPageSize() + (total% hConfig.getPageSize()==0? 0 : 1);
-                                for (int i = 0; i <= pageNum; i++) {
-                                    String url = customText;
-                                    url = url.replace("{#SIZE#}", String.valueOf(hConfig.getPageSize()))
-                                            .replace("{#PAGE#}", String.valueOf(i)).replace("{#OFFSET#}", String.valueOf(i));
-                                    helpLinks.add(url);
-                                }
-                            }
-                            else{
-                                helpLinks.add(customText);
-                            }
-                        }
-                        else{
-                            helpLinks.add(customText);
-                        }
+                        helpLinks = dealCustomHtmlHelpLink(pageHtml, hConfig);
                         break;
                     default:
-                        helpLinks = new ArrayList<>();
                         break;
                 }
-
-                helpLinks.forEach(lk->{
-                    Request request = new Request(lk);
-                    request.putExtra(SysConstant.URL_ID, configId);
-                    page.addTargetRequest(request);
-                });
+                if (helpLinks != null && helpLinks.size() > 0){
+                    helpLinks.forEach(lk->{
+                        Request request = new Request(lk);
+                        request.putExtra(SysConstant.URL_ID, configId);
+                        page.addTargetRequest(request);
+                    });
+                }
             });
         }
+    }
 
-
-
-
-
+    private List<String> dealCustomHtmlHelpLink(Html pageHtml, HelpSelectConfig hConfig) {
+        List<String> helpLinks = new ArrayList<>();
+        String customText = hConfig.getConfigText();
+        List<FieldSelectConfig> pathCombineMap = hConfig.getPathCombineMap();
+        for (FieldSelectConfig fieldConfig : pathCombineMap) {
+            Selectable val = ProcessorUtils.getSelectVal(pageHtml, fieldConfig);
+            if (val == null){
+                continue;
+            }
+            customText = customText.replaceAll("{\\s*" + fieldConfig.getFiledName() + "\\s*}", val.get());
+        }
+        if (!customText.contains("{#")){
+            helpLinks.add(customText);
+            return helpLinks;
+        }
+        Selectable totalVal = ProcessorUtils.getSelectVal(pageHtml, hConfig.getTotalFieldSelect());
+        if(totalVal != null){
+            String tVal = totalVal.get();
+            if (StrUtil.isNotBlank(tVal) && tVal.matches("^\\d+$")) {
+                long total = Long.parseLong(tVal);
+                long pageNum = total / hConfig.getPageSize() + (total % hConfig.getPageSize() == 0 ? 0 : 1);
+                for (int i = 0; i <= pageNum; i++) {
+                    String url = customText;
+                    url = url.replace("{#SIZE#}", String.valueOf(hConfig.getPageSize()))
+                            .replace("{#PAGE#}", String.valueOf(i)).replace("{#OFFSET#}", String.valueOf(i));
+                    helpLinks.add(url);
+                }
+            }
+        }
+        return helpLinks;
     }
 
     @Override
