@@ -28,6 +28,16 @@ public class FieldSelectConfig {
         this.group = group;
     }
 
+//    @Override
+//    public boolean equals(Object obj) {
+//        if (!(obj instanceof FieldSelectConfig)){
+//            return super.equals(obj);
+//        }
+//        FieldSelectConfig config = (FieldSelectConfig)obj;
+//        if (config.getFiledName().equals(this.getFiledName()))
+//
+//    }
+
     public String getFiledName() {
         return filedName;
     }

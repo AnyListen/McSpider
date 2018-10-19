@@ -41,9 +41,21 @@ public class PageConfig {
      */
     private List<FieldSelectConfig> staticFields;
     /**
-     * 新页面的配置
+     * 新 HelpUrl 的配置
      */
-    private PageConfig nextPage;
+    private PageConfig nextHelpConfig;
+    /**
+     * 新 TargetUrl 的配置
+     */
+    private PageConfig nextTargetConfig;
+    /**
+     * 已处理的静态字段
+     */
+    private List<FieldSelectConfig> dealStaticFields;
+    /**
+     * 是否全部为静态字段
+     */
+    private boolean allStaticFiles = true;
 
     public PageConfig(String id) {
         this.id = id;
@@ -111,11 +123,35 @@ public class PageConfig {
         this.id = id;
     }
 
-    public PageConfig getNextPage() {
-        return nextPage;
+    public PageConfig getNextHelpConfig() {
+        return nextHelpConfig;
     }
 
-    public void setNextPage(PageConfig nextPage) {
-        this.nextPage = nextPage;
+    public void setNextHelpConfig(PageConfig nextHelpConfig) {
+        this.nextHelpConfig = nextHelpConfig;
+    }
+
+    public PageConfig getNextTargetConfig() {
+        return nextTargetConfig;
+    }
+
+    public void setNextTargetConfig(PageConfig nextTargetConfig) {
+        this.nextTargetConfig = nextTargetConfig;
+    }
+
+    public List<FieldSelectConfig> getDealStaticFields() {
+        return dealStaticFields;
+    }
+
+    public void setDealStaticFields(List<FieldSelectConfig> dealStaticFields) {
+        this.dealStaticFields = dealStaticFields;
+    }
+
+    public boolean isAllStaticFiles() {
+        return allStaticFiles;
+    }
+
+    public void setAllStaticFiles(boolean allStaticFiles) {
+        this.allStaticFiles = allStaticFiles;
     }
 }
