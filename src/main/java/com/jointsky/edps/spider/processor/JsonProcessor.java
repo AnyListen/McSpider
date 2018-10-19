@@ -64,6 +64,23 @@ public class JsonProcessor implements PageProcessor {
         List<FieldSelectConfig> staticFields = pageConfig.getStaticFields();
         List<FieldSelectConfig> fieldSelect = pageConfig.getFieldSelect();
 
+        if (fieldSelect == null || fieldSelect.size() <=0){
+            return;
+        }
+
+        AbstractSelectable selectable = pageConfig.isJsonType() ? page.getJson() : page.getHtml();
+
+        fieldSelect.forEach(fConfig -> {
+            Selectable selectVal = ProcessorUtils.getSelectVal(staticFields, selectable, fConfig);
+            if (selectVal != null){
+                List<String> vals = selectVal.all();
+                if (vals.size() == 1){
+
+                }
+            }
+        });
+
+
     }
 
     private void dealTargetSelect(Page page, PageConfig pageConfig) {

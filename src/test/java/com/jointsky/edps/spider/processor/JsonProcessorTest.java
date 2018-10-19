@@ -7,6 +7,10 @@ import com.jointsky.edps.spider.utils.SpiderUtils;
 import org.junit.Test;
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Spider;
+import us.codecraft.webmagic.downloader.HttpClientDownloader;
+import us.codecraft.webmagic.selector.Html;
+import us.codecraft.webmagic.selector.Json;
+import us.codecraft.webmagic.selector.Selectable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,5 +47,15 @@ public class JsonProcessorTest {
                 .thread(siteConfig.getThreadNum())
                 .setExitWhenComplete(siteConfig.isExitWhenComplete());
         spider.runAsync();
+    }
+
+    @Test
+    public void testJsonSel(){
+        HttpClientDownloader downloader = new HttpClientDownloader();
+        Html html = downloader.download("http://hot.news.cntv.cn/api/Content/contentinfo?id=ARTIeYJeezpb2BVas5XYHGBY161013");
+        Json json = new Json(html.getDocument().text());
+        Selectable jsonPath = json.jsonPath("$.hotList.itemList.*");
+        List<String> all = jsonPath.all();
+        System.out.println(all);
     }
 }
