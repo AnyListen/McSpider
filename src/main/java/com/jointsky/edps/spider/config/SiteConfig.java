@@ -51,168 +51,189 @@ public class SiteConfig {
         return allPageConfig;
     }
 
-    public void setAllPageConfig(Map<String, PageConfig> allPageConfig) {
+    public SiteConfig setAllPageConfig(Map<String, PageConfig> allPageConfig) {
         this.allPageConfig = allPageConfig;
+        return this;
     }
 
     public String getSiteId() {
         return siteId;
     }
 
-    public void setSiteId(String siteId) {
+    public SiteConfig setSiteId(String siteId) {
         this.siteId = siteId;
+        return this;
     }
 
     public String getSiteName() {
         return siteName;
     }
 
-    public void setSiteName(String siteName) {
+    public SiteConfig setSiteName(String siteName) {
         this.siteName = siteName;
+        return this;
     }
 
     public int getSleepTime() {
         return sleepTime;
     }
 
-    public void setSleepTime(int sleepTime) {
+    public SiteConfig setSleepTime(int sleepTime) {
         this.sleepTime = sleepTime;
+        return this;
     }
 
     public int getRetryTimes() {
         return retryTimes;
     }
 
-    public void setRetryTimes(int retryTimes) {
+    public SiteConfig setRetryTimes(int retryTimes) {
         this.retryTimes = retryTimes;
+        return this;
     }
 
     public int getCycleRetryTimes() {
         return cycleRetryTimes;
     }
 
-    public void setCycleRetryTimes(int cycleRetryTimes) {
+    public SiteConfig setCycleRetryTimes(int cycleRetryTimes) {
         this.cycleRetryTimes = cycleRetryTimes;
+        return this;
     }
 
     public int getRetrySleepTime() {
         return retrySleepTime;
     }
 
-    public void setRetrySleepTime(int retrySleepTime) {
+    public SiteConfig setRetrySleepTime(int retrySleepTime) {
         this.retrySleepTime = retrySleepTime;
+        return this;
     }
 
     public int getTimeOut() {
         return timeOut;
     }
 
-    public void setTimeOut(int timeOut) {
+    public SiteConfig setTimeOut(int timeOut) {
         this.timeOut = timeOut;
+        return this;
     }
 
     public String getDomain() {
         return domain;
     }
 
-    public void setDomain(String domain) {
+    public SiteConfig setDomain(String domain) {
         this.domain = domain;
+        return this;
     }
 
     public String getCharset() {
         return charset;
     }
 
-    public void setCharset(String charset) {
+    public SiteConfig setCharset(String charset) {
         this.charset = charset;
+        return this;
     }
 
     public String getUserAgent() {
         return userAgent;
     }
 
-    public void setUserAgent(String userAgent) {
+    public SiteConfig setUserAgent(String userAgent) {
         this.userAgent = userAgent;
+        return this;
     }
 
     public String getCookie() {
         return cookie;
     }
 
-    public void setCookie(String cookie) {
+    public SiteConfig setCookie(String cookie) {
         this.cookie = cookie;
+        return this;
     }
 
     public Map<String, String> getHeader() {
         return header;
     }
 
-    public void setHeader(Map<String, String> header) {
+    public SiteConfig setHeader(Map<String, String> header) {
         this.header = header;
+        return this;
     }
 
     public boolean isUseGzip() {
         return useGzip;
     }
 
-    public void setUseGzip(boolean useGzip) {
+    public SiteConfig setUseGzip(boolean useGzip) {
         this.useGzip = useGzip;
+        return this;
     }
 
     public String getProcessor() {
         return processor;
     }
 
-    public void setProcessor(String processor) {
+    public SiteConfig setProcessor(String processor) {
         this.processor = processor;
+        return this;
     }
 
     public List<String> getPipelines() {
         return pipelines;
     }
 
-    public void setPipelines(List<String> pipelines) {
+    public SiteConfig setPipelines(List<String> pipelines) {
         this.pipelines = pipelines;
+        return this;
     }
 
     public String getDownloader() {
         return downloader;
     }
 
-    public void setDownloader(String downloader) {
+    public SiteConfig setDownloader(String downloader) {
         this.downloader = downloader;
+        return this;
     }
 
     public String getScheduler() {
         return scheduler;
     }
 
-    public void setScheduler(String scheduler) {
+    public SiteConfig setScheduler(String scheduler) {
         this.scheduler = scheduler;
+        return this;
     }
 
     public StartConfig getStartPage() {
         return startPage;
     }
 
-    public void setStartPage(StartConfig startPage) {
+    public SiteConfig setStartPage(StartConfig startPage) {
         this.startPage = startPage;
         this.allPageConfig.put(SysConstant.START_URL, startPage);
+        return this;
     }
 
     public int getThreadNum() {
         return threadNum;
     }
 
-    public void setThreadNum(int threadNum) {
+    public SiteConfig setThreadNum(int threadNum) {
         this.threadNum = threadNum;
+        return this;
     }
 
     public boolean isExitWhenComplete() {
         return exitWhenComplete;
     }
 
-    public void setExitWhenComplete(boolean exitWhenComplete) {
+    public SiteConfig setExitWhenComplete(boolean exitWhenComplete) {
         this.exitWhenComplete = exitWhenComplete;
+        return this;
     }
 }

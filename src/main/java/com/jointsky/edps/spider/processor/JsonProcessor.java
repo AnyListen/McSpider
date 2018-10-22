@@ -1,8 +1,11 @@
 package com.jointsky.edps.spider.processor;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import cn.hutool.log.StaticLog;
 import com.jointsky.edps.spider.common.SelectType;
 import com.jointsky.edps.spider.common.SysConstant;
@@ -20,7 +23,9 @@ import us.codecraft.webmagic.selector.Selectable;
 import us.codecraft.webmagic.utils.UrlUtils;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -63,24 +68,80 @@ public class JsonProcessor implements PageProcessor {
         }
         List<FieldSelectConfig> staticFields = pageConfig.getStaticFields();
         List<FieldSelectConfig> fieldSelect = pageConfig.getFieldSelect();
-
         if (fieldSelect == null || fieldSelect.size() <=0){
             return;
         }
-
         AbstractSelectable selectable = pageConfig.isJsonType() ? page.getJson() : page.getHtml();
-
-        fieldSelect.forEach(fConfig -> {
+        Map<String, List<String>> resultMap = new HashMap<>();
+        String primaryKey = "";
+        for (FieldSelectConfig fConfig : fieldSelect) {
             Selectable selectVal = ProcessorUtils.getSelectVal(staticFields, selectable, fConfig);
-            if (selectVal != null){
-                List<String> vals = selectVal.all();
-                if (vals.size() == 1){
-
+            if (selectVal == null) {
+                continue;
+            }
+            List<String> vals = selectVal.all();
+            String confText = fConfig.getConfigText();
+            if (fConfig.getSelectType() == SelectType.JPATH && confText.contains("*")) {
+                if (StrUtil.isBlank(primaryKey)) {
+                    primaryKey = confText;
+                }
+                if (confText.endsWith("*")){
+                    primaryKey = confText;
                 }
             }
-        });
-
-
+            String filedName = fConfig.getFiledName();
+            if (resultMap.containsKey(filedName)){
+                resultMap.get(filedName).addAll(vals);
+            }
+            else{
+                resultMap.put(filedName, vals);
+            }
+        }
+        if (!pageConfig.isJsonType() || !primaryKey.contains("*")){
+            page.putField(SysConstant.SINGLE_ITEM, resultMap);
+            return;
+        }
+        List<String> strList = resultMap.get(primaryKey);
+        int size = strList.size();
+        Map<String, Object> singleMap = new HashMap<>();
+        if (size > 1){
+            resultMap.forEach((k,v)->{
+                if (v.size() < size){
+                    singleMap.put(k, v);
+                }
+            });
+        }
+        for (int i = 0; i < size; i++) {
+            if (StrUtil.isBlank(strList.get(i))){
+                continue;
+            }
+            if (primaryKey.endsWith("*") && !JSONUtil.isJson(strList.get(i))){
+                continue;
+            }
+            Map<String, Object> singleItem = new HashMap<>();
+            singleMap.forEach(singleMap:: put);
+            boolean mapUpdate = false;
+            for (Map.Entry<String, List<String>> entry : resultMap.entrySet()) {
+                String k = entry.getKey();
+                List<String> v = entry.getValue();
+                if (v.size() == size) {
+                    if (k.endsWith("*")) {
+                        String s = v.get(i);
+                        JSONObject jsonObject = JSONUtil.parseObj(s);
+                        jsonObject.forEach(singleItem::put);
+                    }
+                    else{
+                        singleItem.put(k, v.get(i));
+                    }
+                    mapUpdate = true;
+                }
+            }
+            if (!mapUpdate){
+                page.putField(SysConstant.SINGLE_ITEM, resultMap);
+                return;
+            }
+            page.putField(SysConstant.SINGLE_ITEM, singleItem);
+        }
     }
 
     private void dealTargetSelect(Page page, PageConfig pageConfig) {
