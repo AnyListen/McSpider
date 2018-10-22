@@ -2233,7 +2233,6 @@
                         $modal.attr('ref', frame.contentWindow.location.href);
                         var frame$ = window.frames[iframeName].$;
                         if(frame$ && options.height === 'auto' && options.size != 'fullscreen') {
-                            // todo: update iframe url to ref attribute
                             var $framebody = frame$('body').addClass('body-modal');
                             if(options.iframeBodyClass) $framebody.addClass(options.iframeBodyClass);
                             var ajustFrameSize = function(check) {
