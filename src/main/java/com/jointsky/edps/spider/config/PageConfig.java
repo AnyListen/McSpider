@@ -35,7 +35,7 @@ public class PageConfig {
     /**
      * 字段选择器
      */
-    private List<FieldSelectConfig> fieldSelect;
+    private List<ResultSelectConfig> fieldSelect;
     /**
      * 静态字段
      */
@@ -99,11 +99,11 @@ public class PageConfig {
         this.helpSelect = helpSelect;
     }
 
-    public List<FieldSelectConfig> getFieldSelect() {
+    public List<ResultSelectConfig> getFieldSelect() {
         return fieldSelect;
     }
 
-    public void setFieldSelect(List<FieldSelectConfig> fieldSelect) {
+    public void setFieldSelect(List<ResultSelectConfig> fieldSelect) {
         this.fieldSelect = fieldSelect;
     }
 

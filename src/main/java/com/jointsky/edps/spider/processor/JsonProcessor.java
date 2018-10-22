@@ -10,6 +10,7 @@ import cn.hutool.log.StaticLog;
 import com.jointsky.edps.spider.common.SelectType;
 import com.jointsky.edps.spider.common.SysConstant;
 import com.jointsky.edps.spider.config.*;
+import com.jointsky.edps.spider.filter.ValueFilter;
 import com.jointsky.edps.spider.utils.ProcessorUtils;
 import com.jointsky.edps.spider.utils.SpiderUtils;
 import us.codecraft.webmagic.Page;
@@ -22,10 +23,7 @@ import us.codecraft.webmagic.selector.Json;
 import us.codecraft.webmagic.selector.Selectable;
 import us.codecraft.webmagic.utils.UrlUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -67,7 +65,7 @@ public class JsonProcessor implements PageProcessor {
             return;
         }
         List<FieldSelectConfig> staticFields = pageConfig.getStaticFields();
-        List<FieldSelectConfig> fieldSelect = pageConfig.getFieldSelect();
+        List<ResultSelectConfig> fieldSelect = pageConfig.getFieldSelect();
         if (fieldSelect == null || fieldSelect.size() <=0){
             return;
         }
@@ -79,7 +77,7 @@ public class JsonProcessor implements PageProcessor {
             if (selectVal == null) {
                 continue;
             }
-            List<String> vals = selectVal.all();
+            List<String> valList = selectVal.all();
             String confText = fConfig.getConfigText();
             if (fConfig.getSelectType() == SelectType.JPATH && confText.contains("*")) {
                 if (StrUtil.isBlank(primaryKey)) {
@@ -91,14 +89,23 @@ public class JsonProcessor implements PageProcessor {
             }
             String filedName = fConfig.getFiledName();
             if (resultMap.containsKey(filedName)){
-                resultMap.get(filedName).addAll(vals);
+                resultMap.get(filedName).addAll(valList);
             }
             else{
-                resultMap.put(filedName, vals);
+                resultMap.put(filedName, valList);
             }
         }
         if (!pageConfig.isJsonType() || !primaryKey.contains("*")){
-            page.putField(SysConstant.SINGLE_ITEM, resultMap);
+            Map<String, Object> singleMap = new HashMap<>();
+            resultMap.forEach((k,v)->{
+                if (v.size() == 1){
+                    singleMap.put(k, v.get(0));
+                }
+                else{
+                    singleMap.put(k, v);
+                }
+            });
+            filterCheck(singleMap, page, pageConfig);
             return;
         }
         List<String> strList = resultMap.get(primaryKey);
@@ -106,7 +113,10 @@ public class JsonProcessor implements PageProcessor {
         Map<String, Object> singleMap = new HashMap<>();
         if (size > 1){
             resultMap.forEach((k,v)->{
-                if (v.size() < size){
+                if (v.size() == 1){
+                    singleMap.put(k, v.get(0));
+                }
+                else if (v.size() < size){
                     singleMap.put(k, v);
                 }
             });
@@ -137,11 +147,33 @@ public class JsonProcessor implements PageProcessor {
                 }
             }
             if (!mapUpdate){
-                page.putField(SysConstant.SINGLE_ITEM, resultMap);
+                filterCheck(singleMap, page, pageConfig);
                 return;
             }
-            page.putField(SysConstant.SINGLE_ITEM, singleItem);
+            filterCheck(singleMap, page, pageConfig);
         }
+    }
+
+    private void filterCheck(Map<String, Object> resultMap, Page page, PageConfig pageConfig) {
+        List<ResultSelectConfig> fieldSelect = pageConfig.getFieldSelect();
+        for (ResultSelectConfig config : fieldSelect) {
+            List<AbstractMap.SimpleEntry<String, Map<String, Object>>> filters = config.getFilters();
+            Object val = resultMap.getOrDefault(config.getFiledName(), null);
+            for (AbstractMap.SimpleEntry<String, Map<String, Object>> str : filters) {
+                ValueFilter filter = SpiderUtils.buildValueFilter(str.getKey());
+                if (filter == null) {
+                    continue;
+                }
+                filter.setValue(val);
+                filter.setSettings(str.getValue());
+                if (filter.shouldRemove()){
+                    return;
+                }
+                val = filter.parseValue();
+            }
+            resultMap.put(config.getFiledName(), val);
+        }
+        page.putField(SysConstant.SINGLE_ITEM, resultMap);
     }
 
     private void dealTargetSelect(Page page, PageConfig pageConfig) {

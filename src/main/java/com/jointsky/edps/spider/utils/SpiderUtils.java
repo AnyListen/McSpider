@@ -3,6 +3,7 @@ package com.jointsky.edps.spider.utils;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.log.StaticLog;
 import com.jointsky.edps.spider.config.SiteConfig;
+import com.jointsky.edps.spider.filter.ValueFilter;
 import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.downloader.Downloader;
 import us.codecraft.webmagic.downloader.HttpClientDownloader;
@@ -101,5 +102,18 @@ public class SpiderUtils {
             StaticLog.error(e);
         }
         return new PriorityScheduler();
+    }
+
+    public static ValueFilter buildValueFilter(String str){
+        try {
+            Class<?> aClass = Class.forName(str);
+            Object instance = aClass.newInstance();
+            if (instance != null){
+                return (ValueFilter)instance;
+            }
+        } catch (Exception e) {
+            StaticLog.error(e);
+        }
+        return null;
     }
 }
