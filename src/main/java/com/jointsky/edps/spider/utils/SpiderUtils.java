@@ -1,14 +1,14 @@
 package com.jointsky.edps.spider.utils;
 
-import cn.hutool.core.util.ArrayUtil;
-import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
 import cn.hutool.log.StaticLog;
-import com.alibaba.fastjson.JSON;
+import com.jointsky.edps.spider.common.SysConstant;
 import com.jointsky.edps.spider.config.SiteConfig;
 import com.jointsky.edps.spider.filter.ValueFilter;
+import com.jointsky.edps.spider.processor.JsonProcessor;
+import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
+import us.codecraft.webmagic.Spider;
 import us.codecraft.webmagic.downloader.Downloader;
 import us.codecraft.webmagic.downloader.HttpClientDownloader;
 import us.codecraft.webmagic.pipeline.ConsolePipeline;
@@ -119,5 +119,28 @@ public class SpiderUtils {
             StaticLog.error(e);
         }
         return null;
+    }
+
+    public static Spider buildJsonSpider(SiteConfig siteConfig){
+        Map<String, Object> startUrls = siteConfig.getStartPage().getUrls();
+        if (startUrls == null || startUrls.size() <=0){
+            StaticLog.error("请设置起始页！");
+            return null;
+        }
+        List<Request> requestList = new ArrayList<>();
+        startUrls.forEach((k,v)->{
+            Request request = new Request(k);
+            request.putExtra(SysConstant.PAGE_SETTING, siteConfig.getStartPage());
+            requestList.add(request);
+        });
+        Spider spider = Spider.create(new JsonProcessor(siteConfig))
+                .setDownloader(SpiderUtils.buildDownloader(siteConfig))
+                .setPipelines(SpiderUtils.buildPipelines(siteConfig))
+                .setScheduler(SpiderUtils.buildScheduler(siteConfig))
+                .startRequest(requestList)
+                .setUUID(siteConfig.getSiteId())
+                .thread(siteConfig.getThreadNum())
+                .setExitWhenComplete(siteConfig.isExitWhenComplete());
+        return spider;
     }
 }

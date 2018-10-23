@@ -11,6 +11,7 @@ import java.util.Map;
 public class SysConstant {
     public static final String START_URL = "START_URL";
     public static final String URL_ID = "URL_ID";
+    public static final String PAGE_SETTING = "PAGE_SETTING";
     public static final String SINGLE_ITEM = "SINGLE_ITEM";
     public static final String NULL_FILTER = "";
     public static final String EMPTY_FILTER = "";

@@ -1,7 +1,5 @@
 package com.jointsky.edps.spider.config;
 
-import com.jointsky.edps.spider.common.SysConstant;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,7 +12,6 @@ import java.util.Map;
  * Created by hezl on 2018-10-17.
  */
 public class SiteConfig implements Serializable {
-    private Map<String, PageConfig> allPageConfig;
     private String siteId;
     private String siteName;
     private int sleepTime = 1000;
@@ -43,18 +40,8 @@ public class SiteConfig implements Serializable {
         this.siteName = siteName;
         this.pipelines = new ArrayList<>();
         this.header = new HashMap<>();
-        this.allPageConfig = new HashMap<>();
         this.downloader = "us.codecraft.webmagic.downloader.HttpClientDownloader";
         this.scheduler = "us.codecraft.webmagic.scheduler.PriorityScheduler";
-    }
-
-    public Map<String, PageConfig> getAllPageConfig() {
-        return allPageConfig;
-    }
-
-    public SiteConfig setAllPageConfig(Map<String, PageConfig> allPageConfig) {
-        this.allPageConfig = allPageConfig;
-        return this;
     }
 
     public String getSiteId() {
@@ -216,7 +203,6 @@ public class SiteConfig implements Serializable {
 
     public SiteConfig setStartPage(StartConfig startPage) {
         this.startPage = startPage;
-        this.allPageConfig.put(SysConstant.START_URL, startPage);
         return this;
     }
 

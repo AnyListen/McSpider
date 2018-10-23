@@ -1,9 +1,7 @@
 package com.jointsky.edps.spider.processor;
 
-import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.crypto.SecureUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import cn.hutool.log.StaticLog;
@@ -23,7 +21,10 @@ import us.codecraft.webmagic.selector.Json;
 import us.codecraft.webmagic.selector.Selectable;
 import us.codecraft.webmagic.utils.UrlUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -37,41 +38,66 @@ import java.util.stream.Stream;
 public class JsonProcessor implements PageProcessor {
 
     private Site site;
-    private SiteConfig siteConfig;
 
     public JsonProcessor(SiteConfig siteConfig) {
-        this.siteConfig = siteConfig;
-        this.site = SpiderUtils.buildSite(this.siteConfig);
+        this.site = SpiderUtils.buildSite(siteConfig);
     }
 
     @Override
     public void process(Page page) {
         Request request = page.getRequest();
-        Object extra = request.getExtra(SysConstant.URL_ID);
-        if (extra == null) {
+        Object extra = request.getExtra(SysConstant.PAGE_SETTING);
+        if (!(extra instanceof PageConfig)) {
             StaticLog.error("未知链接：" + request.getUrl());
             page.setSkip(true);
             return;
         }
-        String urlId = extra.toString();
-        PageConfig pageConfig = this.siteConfig.getAllPageConfig().get(urlId);
-        dealHelpSelect(page, pageConfig);
-        dealTargetSelect(page, pageConfig);
-        dealTargetUrl(page, pageConfig);
+        PageConfig pageConfig = ObjectUtil.clone((PageConfig) extra);
+        AbstractSelectable selectable = pageConfig.isJsonType() ? page.getJson() : page.getHtml();
+        dealStaticFields(selectable, pageConfig);
+        dealHelpSelect(page, selectable, pageConfig);
+        dealTargetSelect(page, selectable, pageConfig);
+        dealTargetUrl(page, selectable, pageConfig);
     }
 
-    private void dealTargetUrl(Page page, PageConfig pageConfig) {
+    /**
+     * 处理静态字段里面的选择表达式
+     * 删除无法正确匹配的表达式
+     * 将其全部转换为 SelectType.NONE 类型
+     */
+    private void dealStaticFields(AbstractSelectable selectable, PageConfig pageConfig) {
+        List<FieldSelectConfig> staticFields = pageConfig.getStaticFields();
+        for (int i = 0; i < staticFields.size(); i++) {
+            FieldSelectConfig fConfig = staticFields.get(i);
+            if (fConfig.getSelectType() != SelectType.NONE) {
+                continue;
+            }
+            Selectable val = ProcessorUtils.getSelectVal(staticFields, selectable, fConfig);
+            if (val == null) {
+                staticFields.remove(fConfig);
+                i--;
+            } else {
+                fConfig.setConfigText(val.get());
+                fConfig.setSelectType(SelectType.NONE);
+            }
+        }
+    }
+
+    /**
+     * 处理结果页面
+     * 根据 ResultFields 构建结果
+     */
+    private void dealTargetUrl(Page page, AbstractSelectable selectable, PageConfig pageConfig) {
         if (!pageConfig.isTargetUrl()){
             return;
         }
-        List<FieldSelectConfig> staticFields = pageConfig.getStaticFields();
         List<ResultSelectConfig> fieldSelect = pageConfig.getResultFields();
         if (fieldSelect == null || fieldSelect.size() <=0){
             return;
         }
-        AbstractSelectable selectable = pageConfig.isJsonType() ? page.getJson() : page.getHtml();
+        String primaryKey = "";     //包含 * 的 JsonPath 作为循环的依据
         Map<String, List<String>> resultMap = new HashMap<>();
-        String primaryKey = "";
+        List<FieldSelectConfig> staticFields = pageConfig.getStaticFields();
         for (FieldSelectConfig fConfig : fieldSelect) {
             Selectable selectVal = ProcessorUtils.getSelectVal(staticFields, selectable, fConfig);
             if (selectVal == null) {
@@ -95,6 +121,8 @@ public class JsonProcessor implements PageProcessor {
                 resultMap.put(filedName, valList);
             }
         }
+        //Html 类型的结果页或者 JsonPath 不包含 * 的，直接认为是最终结果
+        //对 singleMap 中 value 的 size 为 1 的元素进行优化
         if (!pageConfig.isJsonType() || !primaryKey.contains("*")){
             Map<String, Object> singleMap = new HashMap<>();
             resultMap.forEach((k,v)->{
@@ -108,9 +136,13 @@ public class JsonProcessor implements PageProcessor {
             filterCheck(singleMap, page, pageConfig);
             return;
         }
-        List<String> strList = resultMap.get(primaryKey);
-        int size = strList.size();
+
+        //处理包含 * 的结果
+        //包含 * 意味着匹配到 jsonArray 的某一个节点，所以结果数量大于 1
+        List<String> primaryValList = resultMap.get(primaryKey);
+        int size = primaryValList.size();
         Map<String, Object> singleMap = new HashMap<>();
+        //优化普通字段（value 的 size 的大小小于 primaryValList 的大小）
         if (size > 1){
             resultMap.forEach((k,v)->{
                 if (v.size() == 1){
@@ -121,20 +153,25 @@ public class JsonProcessor implements PageProcessor {
                 }
             });
         }
+        //排除特殊状况
+        if (!primaryKey.endsWith("*") &&  resultMap.entrySet().stream().filter(k-> k.getValue().size() >= size).count() <= 1){
+            filterCheck(singleMap, page, pageConfig);
+            return;
+        }
+        //循环生成结果
         for (int i = 0; i < size; i++) {
-            if (StrUtil.isBlank(strList.get(i))){
+            if (StrUtil.isBlank(primaryValList.get(i))){
                 continue;
             }
-            if (primaryKey.endsWith("*") && !JSONUtil.isJson(strList.get(i))){
+            if (primaryKey.endsWith("*") && !JSONUtil.isJson(primaryValList.get(i))){
                 continue;
             }
             Map<String, Object> singleItem = new HashMap<>();
             singleMap.forEach(singleMap:: put);
-            boolean mapUpdate = false;
             for (Map.Entry<String, List<String>> entry : resultMap.entrySet()) {
                 String k = entry.getKey();
                 List<String> v = entry.getValue();
-                if (v.size() == size) {
+                if (v.size() >= size) {
                     if (k.endsWith("*")) {
                         String s = v.get(i);
                         JSONObject jsonObject = JSONUtil.parseObj(s);
@@ -143,32 +180,30 @@ public class JsonProcessor implements PageProcessor {
                     else{
                         singleItem.put(k, v.get(i));
                     }
-                    mapUpdate = true;
                 }
             }
-            if (!mapUpdate){
-                filterCheck(singleMap, page, pageConfig);
-                return;
-            }
-            filterCheck(singleMap, page, pageConfig);
+            filterCheck(singleItem, page, pageConfig);
         }
     }
 
+    /**
+     * 对结果进行校验
+     */
     private void filterCheck(Map<String, Object> resultMap, Page page, PageConfig pageConfig) {
         List<ResultSelectConfig> fieldSelect = pageConfig.getResultFields();
         for (ResultSelectConfig config : fieldSelect) {
-            List<AbstractMap.SimpleEntry<String, Map<String, Object>>> filters = config.getFilters();
+            List<ValueFilterConfig> filters = config.getFilters();
             if (filters == null || filters.size() <= 0){
                 continue;
             }
             Object val = resultMap.getOrDefault(config.getFiledName(), null);
-            for (AbstractMap.SimpleEntry<String, Map<String, Object>> str : filters) {
-                ValueFilter filter = SpiderUtils.buildValueFilter(str.getKey());
+            for (ValueFilterConfig filterConfig : filters) {
+                ValueFilter filter = SpiderUtils.buildValueFilter(filterConfig.getClassName());
                 if (filter == null) {
                     continue;
                 }
                 filter.setValue(val);
-                filter.setSettings(str.getValue());
+                filter.setSettings(filterConfig.getSettingMap());
                 if (filter.shouldRemove()){
                     return;
                 }
@@ -179,19 +214,19 @@ public class JsonProcessor implements PageProcessor {
         page.putField(SysConstant.SINGLE_ITEM, resultMap);
     }
 
-    private void dealTargetSelect(Page page, PageConfig pageConfig) {
+    /**
+     * 提取目标页链接
+     */
+    private void dealTargetSelect(Page page, AbstractSelectable selectable, PageConfig pageConfig) {
         List<UrlSelectConfig> targetSelect = pageConfig.getTargetSelect();
         if (targetSelect == null || targetSelect.size() <= 0) {
             return;
         }
-        List<FieldSelectConfig> newStaticFields = pageConfig.getDealStaticFields();
-        AbstractSelectable selectable = pageConfig.isJsonType() ? page.getJson() : page.getHtml();
+        List<FieldSelectConfig> staticFields = pageConfig.getStaticFields();
         PageConfig nextPage = pageConfig.getNextTargetConfig();
-        String configId = (pageConfig.isAllStaticFiles() ? "" : SecureUtil.md5(page.getRequest().getUrl())) + nextPage.getId();
-        if (newStaticFields != null){
-            nextPage.getStaticFields().addAll(newStaticFields);
+        if (staticFields != null && staticFields.size() > 0){
+            nextPage.getStaticFields().addAll(staticFields);
         }
-        this.siteConfig.getAllPageConfig().put(configId, nextPage);
         if (pageConfig.isJsonType()) {
             @SuppressWarnings("ConstantConditions")
             Json json = (Json) selectable;
@@ -203,12 +238,12 @@ public class JsonProcessor implements PageProcessor {
                         helpLinks = fixHelpUrls(json.jsonPath(hConfig.getConfigText()).all(), page.getRequest().getUrl());
                         break;
                     case CUSTOM:
-                        helpLinks = dealCustomTargetLink(newStaticFields, json, hConfig);
+                        helpLinks = dealCustomTargetLink(staticFields, json, hConfig);
                         break;
                     default:
                         break;
                 }
-                addLinksToPage(helpLinks, configId, hConfig, nextPage, page);
+                addLinksToPage(helpLinks, nextPage, page);
             }
             return;
         }
@@ -232,15 +267,13 @@ public class JsonProcessor implements PageProcessor {
                     helpLinks = htmlLinks.jsonPath(hConfig.getConfigText()).all();
                     break;
                 case CUSTOM:
-                    helpLinks = dealCustomTargetLink(newStaticFields, pageHtml, hConfig);
+                    helpLinks = dealCustomTargetLink(staticFields, pageHtml, hConfig);
                     break;
                 default:
                     break;
             }
-            addLinksToPage(helpLinks, configId, hConfig, nextPage, page);
+            addLinksToPage(helpLinks, nextPage, page);
         }
-
-
     }
 
     private static final Pattern pattern = Pattern.compile("\\{([^}]+)}");
@@ -304,34 +337,19 @@ public class JsonProcessor implements PageProcessor {
        return helpLinks;
     }
 
-    private void dealHelpSelect(Page page, PageConfig pageConfig) {
+    /**
+     * 提取中间页链接
+     */
+    private void dealHelpSelect(Page page, AbstractSelectable selectable, PageConfig pageConfig) {
         List<HelpSelectConfig> helpSelect = pageConfig.getHelpSelect();
         if (helpSelect == null || helpSelect.size() <= 0) {
             return;
         }
         List<FieldSelectConfig> staticFields = pageConfig.getStaticFields();
         PageConfig nextPage = pageConfig.getNextHelpConfig();
-        String configId = SecureUtil.md5(page.getRequest().getUrl()) + nextPage.getId();
-        AbstractSelectable selectable = pageConfig.isJsonType() ? page.getJson() : page.getHtml();
-        //新配置的静态字段
-        List<FieldSelectConfig> newStaticFields = pageConfig.getDealStaticFields();
-        for (FieldSelectConfig fConfig : staticFields) {
-            if (fConfig.getSelectType() != SelectType.NONE) {
-                pageConfig.setAllStaticFiles(false);
-            }
-            Selectable val = ProcessorUtils.getSelectVal(staticFields, selectable, fConfig);
-            if (val != null) {
-                FieldSelectConfig newFiled = new FieldSelectConfig(fConfig.getFiledName(), CollUtil.join(val.all(), ";"), SelectType.NONE);
-                newStaticFields.add(newFiled);
-            }
+        if (staticFields != null && staticFields.size() > 0){
+            nextPage.getStaticFields().addAll(staticFields);
         }
-        if (pageConfig.isAllStaticFiles()) {
-            configId = nextPage.getId();
-        }
-        if (newStaticFields != null){
-            nextPage.getStaticFields().addAll(newStaticFields);
-        }
-        this.siteConfig.getAllPageConfig().put(configId, nextPage);
         if (pageConfig.isJsonType()) {
             @SuppressWarnings("ConstantConditions")
             Json json = (Json) selectable;
@@ -343,12 +361,12 @@ public class JsonProcessor implements PageProcessor {
                         helpLinks = fixHelpUrls(json.jsonPath(hConfig.getConfigText()).all(), page.getRequest().getUrl());
                         break;
                     case CUSTOM:
-                        helpLinks = dealCustomHelpLink(newStaticFields, json, hConfig);
+                        helpLinks = dealCustomHelpLink(staticFields, json, hConfig);
                         break;
                     default:
                         break;
                 }
-                addLinksToPage(helpLinks, configId, hConfig, nextPage, page);
+                addLinksToPage(helpLinks, nextPage, page);
             }
             return;
         }
@@ -372,15 +390,18 @@ public class JsonProcessor implements PageProcessor {
                     helpLinks = htmlLinks.jsonPath(hConfig.getConfigText()).all();
                     break;
                 case CUSTOM:
-                    helpLinks = dealCustomHelpLink(newStaticFields, pageHtml, hConfig);
+                    helpLinks = dealCustomHelpLink(staticFields, pageHtml, hConfig);
                     break;
                 default:
                     break;
             }
-            addLinksToPage(helpLinks, configId, hConfig, nextPage, page);
+            addLinksToPage(helpLinks, nextPage, page);
         }
     }
 
+    /**
+     * 修复不带 http 的链接
+     */
     private List<String> fixHelpUrls(List<String> urls, String reqUrl) {
         if (urls == null) {
             return null;
@@ -403,8 +424,8 @@ public class JsonProcessor implements PageProcessor {
     private List<String> dealCustomHelpLink(List<FieldSelectConfig> allStaticFields, AbstractSelectable selectable, HelpSelectConfig hConfig) {
         List<String> helpLinks = new ArrayList<>();
         String customText = hConfig.getConfigText();
-        List<FieldSelectConfig> pathCombineMap = hConfig.getPathCombineParams();
-        for (FieldSelectConfig fieldConfig : pathCombineMap) {
+        List<FieldSelectConfig> pathCombineParams = hConfig.getPathCombineParams();
+        for (FieldSelectConfig fieldConfig : pathCombineParams) {
             Selectable val = ProcessorUtils.getSelectVal(allStaticFields, selectable, fieldConfig);
             if (val == null){
                 continue;
@@ -432,19 +453,11 @@ public class JsonProcessor implements PageProcessor {
         return helpLinks;
     }
 
-    private void addLinksToPage(List<String> helpLinks, String configId, UrlSelectConfig urlConfig, PageConfig pageConfig,Page page) {
-        if (urlConfig.isJsonType()){
-            configId = configId + "-json";
-        }
-        if (!this.siteConfig.getAllPageConfig().containsKey(configId)){
-            PageConfig newPageConf = ObjectUtil.clone(pageConfig);
-            newPageConf.setJsonType(urlConfig.isJsonType());
-            this.siteConfig.getAllPageConfig().put(configId, newPageConf);
-        }
+    private void addLinksToPage(List<String> helpLinks, PageConfig pageConfig,Page page) {
         if (helpLinks != null && helpLinks.size() > 0) {
             for (String lk : helpLinks) {
                 Request request = new Request(lk);
-                request.putExtra(SysConstant.URL_ID, configId);
+                request.putExtra(SysConstant.PAGE_SETTING, pageConfig);
                 page.addTargetRequest(request);
             }
         }

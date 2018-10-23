@@ -3,11 +3,9 @@ package com.jointsky.edps.spider.processor;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.log.StaticLog;
 import com.jointsky.edps.spider.common.SelectType;
-import com.jointsky.edps.spider.common.SysConstant;
 import com.jointsky.edps.spider.config.*;
 import com.jointsky.edps.spider.utils.SpiderUtils;
 import org.junit.Test;
-import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Spider;
 import us.codecraft.webmagic.downloader.HttpClientDownloader;
 import us.codecraft.webmagic.selector.Html;
@@ -33,20 +31,25 @@ public class JsonProcessorTest {
         startUrlMap.put("http://www.xinhuanet.com/politics/leaders/index.htm", null);
         startConfig.setUrls(startUrlMap);
         startConfig.getHelpSelect().add(new HelpSelectConfig(false, "http://www.xinhuanet.com/politics/leaders/\\w+/index.htm", SelectType.REGEX));
-        PageConfig leaderHelpPage = new PageConfig("leader-page");
+        PageConfig leaderHelpPage = new PageConfig();
         leaderHelpPage.getHelpSelect().add(new HelpSelectConfig(false, "http://www.xinhuanet.com/politics/leaders/\\w+/jhqw.htm", SelectType.REGEX));
         leaderHelpPage.getHelpSelect().add(new HelpSelectConfig(false, "http://www.xinhuanet.com/politics/leaders/\\w+/kcsc.htm", SelectType.REGEX));
         leaderHelpPage.getHelpSelect().add(new HelpSelectConfig(false, "http://www.xinhuanet.com/politics/leaders/\\w+/hyhd.htm", SelectType.REGEX));
 
         //region 结果页面内容提取
-        PageConfig detailHtmlPage = new PageConfig("html-detail-page");
+        PageConfig detailHtmlPage = new PageConfig();
         detailHtmlPage.setTargetUrl(true);
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("leader_nm", "leader_nm", SelectType.FIELD));
-        detailHtmlPage.getResultFields().add(new ResultSelectConfig("title", "(?<=h-title\">\\s{0,30})[^<]+?(?=\\s*</div>)", SelectType.REGEX));
+        ResultSelectConfig titleField = new ResultSelectConfig("title", "(?<=h-title\">\\s{0,30})[^<]+?(?=\\s*</div>)", SelectType.REGEX);
+//        HashMap<String, Object> titleFilterSetting = new HashMap<String, Object>() {{
+//            put(SysConstant.SIMPLE_FILTER_METHOD, SysConstant.EMPTY_FILTER);
+//        }};
+//        ValueFilterConfig titleFilter = new ValueFilterConfig().setClassName("com.jointsky.edps.spider.filter.SimpleValueFilter").setSettingMap(titleFilterSetting);
+//        titleField.getFilters().add(titleFilter);
+        detailHtmlPage.getResultFields().add(titleField);
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("summary", "(?<=description\" content=\")[^\"]+?(?=\")", SelectType.REGEX));
         PageConfig detailJsonPage = ObjectUtil.clone(detailHtmlPage);
         detailHtmlPage.setTargetUrl(true);
-        detailJsonPage.setId("json-detail-page");
         //endregion
 
         HelpSelectConfig leaderJsonHelpSelect = new HelpSelectConfig(true, "http://qc.wa.news.cn/nodeart/list?nid={nid}&pgnum=1&cnt=10&attr=&tp=1&orderby=1&callback=jQuery1&_=1540199776", SelectType.CUSTOM);
@@ -54,7 +57,7 @@ public class JsonProcessorTest {
         nidSelect.setGroup(1);
         leaderJsonHelpSelect.getPathCombineParams().add(nidSelect);
 
-        PageConfig jsonTargetPage = new PageConfig("json-target-page");
+        PageConfig jsonTargetPage = new PageConfig();
         jsonTargetPage.setJsonType(true);
         jsonTargetPage.getTargetSelect().add(new UrlSelectConfig("$.data.list.*.LinkUrl", SelectType.JPATH));
 
@@ -70,7 +73,7 @@ public class JsonProcessorTest {
         jsonTargetPage.setNextHelpConfig(jsonNextHelp);
 
 
-        PageConfig targetHtmlPage = new PageConfig("speech-page");
+        PageConfig targetHtmlPage = new PageConfig();
         targetHtmlPage.getTargetSelect().add(new HelpSelectConfig(false, "http://www.xinhuanet.com/politics/leaders/[\\w/]+?/c_\\d+\\.htm", SelectType.REGEX));
         targetHtmlPage.getHelpSelect().add(leaderJsonHelpSelect);
         targetHtmlPage.setNextTargetConfig(detailHtmlPage);
@@ -79,8 +82,6 @@ public class JsonProcessorTest {
 
 
         leaderHelpPage.setNextHelpConfig(targetHtmlPage);
-
-
         startConfig.setNextHelpConfig(leaderHelpPage);
 
 
@@ -91,21 +92,7 @@ public class JsonProcessorTest {
             StaticLog.error("请设置起始页！");
             return;
         }
-        List<Request> requestList = new ArrayList<>();
-        startUrls.forEach((k,v)->{
-            Request request = new Request(k);
-            request.putExtra(SysConstant.URL_ID, SysConstant.START_URL);
-            requestList.add(request);
-        });
-
-        Spider spider = Spider.create(new JsonProcessor(siteConfig))
-                .setDownloader(SpiderUtils.buildDownloader(siteConfig))
-                .setPipelines(SpiderUtils.buildPipelines(siteConfig))
-                .setScheduler(SpiderUtils.buildScheduler(siteConfig))
-                .startRequest(requestList)
-                .setUUID(siteConfig.getSiteId())
-                .thread(siteConfig.getThreadNum())
-                .setExitWhenComplete(siteConfig.isExitWhenComplete());
+        Spider spider = SpiderUtils.buildJsonSpider(siteConfig);
         spider.run();
     }
 

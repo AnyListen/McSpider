@@ -11,13 +11,6 @@ import java.util.List;
  */
 public class PageConfig implements Serializable {
     /**
-     * 页面配置ID
-     */
-    private String id;
-    /**
-     * URL 类型
-     */
-    /**
      * 结果是否为 JSON
      */
     private boolean jsonType;
@@ -49,24 +42,14 @@ public class PageConfig implements Serializable {
      * 新 TargetUrl 的配置
      */
     private PageConfig nextTargetConfig;
-    /**
-     * 已处理的静态字段
-     */
-    private List<FieldSelectConfig> dealStaticFields;
-    /**
-     * 是否全部为静态字段
-     */
-    private boolean allStaticFiles = true;
 
-    public PageConfig(String id) {
-        this.id = id;
+    public PageConfig() {
         this.jsonType = false;
         this.targetUrl = false;
         this.targetSelect = new ArrayList<>();
         this.helpSelect = new ArrayList<>();
         this.resultFields = new ArrayList<>();
         this.staticFields = new ArrayList<>();
-        this.dealStaticFields = new ArrayList<>();
     }
 
     public boolean isJsonType() {
@@ -117,14 +100,6 @@ public class PageConfig implements Serializable {
         this.staticFields = staticFields;
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
     public PageConfig getNextHelpConfig() {
         return nextHelpConfig;
     }
@@ -139,21 +114,5 @@ public class PageConfig implements Serializable {
 
     public void setNextTargetConfig(PageConfig nextTargetConfig) {
         this.nextTargetConfig = nextTargetConfig;
-    }
-
-    public List<FieldSelectConfig> getDealStaticFields() {
-        return dealStaticFields;
-    }
-
-    public void setDealStaticFields(List<FieldSelectConfig> dealStaticFields) {
-        this.dealStaticFields = dealStaticFields;
-    }
-
-    public boolean isAllStaticFiles() {
-        return allStaticFiles;
-    }
-
-    public void setAllStaticFiles(boolean allStaticFiles) {
-        this.allStaticFiles = allStaticFiles;
     }
 }
