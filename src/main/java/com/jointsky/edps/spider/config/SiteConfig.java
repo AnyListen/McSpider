@@ -2,6 +2,7 @@ package com.jointsky.edps.spider.config;
 
 import com.jointsky.edps.spider.common.SysConstant;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.Map;
  * edps-spider
  * Created by hezl on 2018-10-17.
  */
-public class SiteConfig {
+public class SiteConfig implements Serializable {
     private Map<String, PageConfig> allPageConfig;
     private String siteId;
     private String siteName;

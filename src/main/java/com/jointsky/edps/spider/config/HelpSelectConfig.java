@@ -2,6 +2,7 @@ package com.jointsky.edps.spider.config;
 
 import com.jointsky.edps.spider.common.SelectType;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,14 +11,14 @@ import java.util.List;
  * edps-spider
  * Created by hezl on 2018-10-17.
  */
-public class HelpSelectConfig extends UrlSelectConfig{
+public class HelpSelectConfig extends UrlSelectConfig implements Serializable {
     private int pageSize = 20;
     private FieldSelectConfig totalFieldSelect;
-    private List<FieldSelectConfig> pathCombineMap;
+    private List<FieldSelectConfig> pathCombineParams;
 
     public HelpSelectConfig(boolean jsonType, String configText, SelectType selectType) {
         super(jsonType, configText, selectType);
-        this.pathCombineMap = new ArrayList<>();
+        this.pathCombineParams = new ArrayList<>();
     }
 
     public int getPageSize() {
@@ -28,12 +29,12 @@ public class HelpSelectConfig extends UrlSelectConfig{
         this.pageSize = pageSize;
     }
 
-    public List<FieldSelectConfig> getPathCombineMap() {
-        return pathCombineMap;
+    public List<FieldSelectConfig> getPathCombineParams() {
+        return pathCombineParams;
     }
 
-    public void setPathCombineMap(List<FieldSelectConfig> pathCombineMap) {
-        this.pathCombineMap = pathCombineMap;
+    public void setPathCombineParams(List<FieldSelectConfig> pathCombineParams) {
+        this.pathCombineParams = pathCombineParams;
     }
 
     public FieldSelectConfig getTotalFieldSelect() {

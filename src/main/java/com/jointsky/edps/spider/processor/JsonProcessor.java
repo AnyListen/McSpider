@@ -1,7 +1,7 @@
 package com.jointsky.edps.spider.processor;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.json.JSONObject;
@@ -65,7 +65,7 @@ public class JsonProcessor implements PageProcessor {
             return;
         }
         List<FieldSelectConfig> staticFields = pageConfig.getStaticFields();
-        List<ResultSelectConfig> fieldSelect = pageConfig.getFieldSelect();
+        List<ResultSelectConfig> fieldSelect = pageConfig.getResultFields();
         if (fieldSelect == null || fieldSelect.size() <=0){
             return;
         }
@@ -155,9 +155,12 @@ public class JsonProcessor implements PageProcessor {
     }
 
     private void filterCheck(Map<String, Object> resultMap, Page page, PageConfig pageConfig) {
-        List<ResultSelectConfig> fieldSelect = pageConfig.getFieldSelect();
+        List<ResultSelectConfig> fieldSelect = pageConfig.getResultFields();
         for (ResultSelectConfig config : fieldSelect) {
             List<AbstractMap.SimpleEntry<String, Map<String, Object>>> filters = config.getFilters();
+            if (filters == null || filters.size() <= 0){
+                continue;
+            }
             Object val = resultMap.getOrDefault(config.getFiledName(), null);
             for (AbstractMap.SimpleEntry<String, Map<String, Object>> str : filters) {
                 ValueFilter filter = SpiderUtils.buildValueFilter(str.getKey());
@@ -185,7 +188,9 @@ public class JsonProcessor implements PageProcessor {
         AbstractSelectable selectable = pageConfig.isJsonType() ? page.getJson() : page.getHtml();
         PageConfig nextPage = pageConfig.getNextTargetConfig();
         String configId = (pageConfig.isAllStaticFiles() ? "" : SecureUtil.md5(page.getRequest().getUrl())) + nextPage.getId();
-        nextPage.getStaticFields().addAll(newStaticFields);
+        if (newStaticFields != null){
+            nextPage.getStaticFields().addAll(newStaticFields);
+        }
         this.siteConfig.getAllPageConfig().put(configId, nextPage);
         if (pageConfig.isJsonType()) {
             @SuppressWarnings("ConstantConditions")
@@ -203,7 +208,7 @@ public class JsonProcessor implements PageProcessor {
                     default:
                         break;
                 }
-                addLinksToPage(helpLinks, configId, page);
+                addLinksToPage(helpLinks, configId, hConfig, nextPage, page);
             }
             return;
         }
@@ -232,7 +237,7 @@ public class JsonProcessor implements PageProcessor {
                 default:
                     break;
             }
-            addLinksToPage(helpLinks, configId, page);
+            addLinksToPage(helpLinks, configId, hConfig, nextPage, page);
         }
 
 
@@ -246,7 +251,7 @@ public class JsonProcessor implements PageProcessor {
             return helpLinks;
         }
         for (FieldSelectConfig fieldConfig : newStaticFields) {
-            customText = customText.replaceAll("{\\s*" + fieldConfig.getFiledName() + "\\s*}", fieldConfig.getConfigText());
+            customText = customText.replaceAll("\\{\\s*" + fieldConfig.getFiledName() + "\\s*}", fieldConfig.getConfigText());
         }
         if (!customText.matches("\\{[^}]+}")) {
             helpLinks.add(customText);
@@ -271,7 +276,7 @@ public class JsonProcessor implements PageProcessor {
                 if (jsonPath == null){
                     return helpLinks;
                 }
-                customText = customText.replaceAll("{\\s*" + s + "\\s*}", jsonPath.get());
+                customText = customText.replaceAll("\\{\\s*" + s + "\\s*}", jsonPath.get());
             }
             ps = stream.filter(p -> p.contains("*")).collect(Collectors.toList());
             if (ps.size() <= 0){
@@ -289,7 +294,7 @@ public class JsonProcessor implements PageProcessor {
                     if (val == null){
                         break;
                     }
-                    link = link.replaceAll("{\\s*" + p + "\\s*}", val.get());
+                    link = link.replaceAll("\\{\\s*" + p + "\\s*}", val.get());
                 }
                 if (!link.matches("\\{[^}]+}")){
                     helpLinks.add(link);
@@ -323,7 +328,9 @@ public class JsonProcessor implements PageProcessor {
         if (pageConfig.isAllStaticFiles()) {
             configId = nextPage.getId();
         }
-        nextPage.getStaticFields().addAll(newStaticFields);
+        if (newStaticFields != null){
+            nextPage.getStaticFields().addAll(newStaticFields);
+        }
         this.siteConfig.getAllPageConfig().put(configId, nextPage);
         if (pageConfig.isJsonType()) {
             @SuppressWarnings("ConstantConditions")
@@ -341,7 +348,7 @@ public class JsonProcessor implements PageProcessor {
                     default:
                         break;
                 }
-                addLinksToPage(helpLinks, configId, page);
+                addLinksToPage(helpLinks, configId, hConfig, nextPage, page);
             }
             return;
         }
@@ -370,7 +377,7 @@ public class JsonProcessor implements PageProcessor {
                 default:
                     break;
             }
-            addLinksToPage(helpLinks, configId, page);
+            addLinksToPage(helpLinks, configId, hConfig, nextPage, page);
         }
     }
 
@@ -396,13 +403,13 @@ public class JsonProcessor implements PageProcessor {
     private List<String> dealCustomHelpLink(List<FieldSelectConfig> allStaticFields, AbstractSelectable selectable, HelpSelectConfig hConfig) {
         List<String> helpLinks = new ArrayList<>();
         String customText = hConfig.getConfigText();
-        List<FieldSelectConfig> pathCombineMap = hConfig.getPathCombineMap();
+        List<FieldSelectConfig> pathCombineMap = hConfig.getPathCombineParams();
         for (FieldSelectConfig fieldConfig : pathCombineMap) {
             Selectable val = ProcessorUtils.getSelectVal(allStaticFields, selectable, fieldConfig);
             if (val == null){
                 continue;
             }
-            customText = customText.replaceAll("{\\s*" + fieldConfig.getFiledName() + "\\s*}", val.get());
+            customText = customText.replaceAll("\\{\\s*" + fieldConfig.getFiledName() + "\\s*}", val.get());
         }
         if (!customText.contains("{#")) {
             helpLinks.add(customText);
@@ -425,7 +432,15 @@ public class JsonProcessor implements PageProcessor {
         return helpLinks;
     }
 
-    private void addLinksToPage(List<String> helpLinks, String configId, Page page) {
+    private void addLinksToPage(List<String> helpLinks, String configId, UrlSelectConfig urlConfig, PageConfig pageConfig,Page page) {
+        if (urlConfig.isJsonType()){
+            configId = configId + "-json";
+        }
+        if (!this.siteConfig.getAllPageConfig().containsKey(configId)){
+            PageConfig newPageConf = ObjectUtil.clone(pageConfig);
+            newPageConf.setJsonType(urlConfig.isJsonType());
+            this.siteConfig.getAllPageConfig().put(configId, newPageConf);
+        }
         if (helpLinks != null && helpLinks.size() > 0) {
             for (String lk : helpLinks) {
                 Request request = new Request(lk);

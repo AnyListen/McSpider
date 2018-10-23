@@ -1,5 +1,6 @@
 package com.jointsky.edps.spider.config;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,7 +9,7 @@ import java.util.List;
  * edps-spider
  * Created by hezl on 2018-10-17.
  */
-public class PageConfig {
+public class PageConfig implements Serializable {
     /**
      * 页面配置ID
      */
@@ -35,7 +36,7 @@ public class PageConfig {
     /**
      * 字段选择器
      */
-    private List<ResultSelectConfig> fieldSelect;
+    private List<ResultSelectConfig> resultFields;
     /**
      * 静态字段
      */
@@ -63,8 +64,9 @@ public class PageConfig {
         this.targetUrl = false;
         this.targetSelect = new ArrayList<>();
         this.helpSelect = new ArrayList<>();
-        this.fieldSelect = new ArrayList<>();
+        this.resultFields = new ArrayList<>();
         this.staticFields = new ArrayList<>();
+        this.dealStaticFields = new ArrayList<>();
     }
 
     public boolean isJsonType() {
@@ -99,12 +101,12 @@ public class PageConfig {
         this.helpSelect = helpSelect;
     }
 
-    public List<ResultSelectConfig> getFieldSelect() {
-        return fieldSelect;
+    public List<ResultSelectConfig> getResultFields() {
+        return resultFields;
     }
 
-    public void setFieldSelect(List<ResultSelectConfig> fieldSelect) {
-        this.fieldSelect = fieldSelect;
+    public void setResultFields(List<ResultSelectConfig> resultFields) {
+        this.resultFields = resultFields;
     }
 
     public List<FieldSelectConfig> getStaticFields() {

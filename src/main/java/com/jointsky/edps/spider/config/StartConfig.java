@@ -2,6 +2,7 @@ package com.jointsky.edps.spider.config;
 
 import com.jointsky.edps.spider.common.SysConstant;
 
+import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -10,7 +11,7 @@ import java.util.Map;
  * edps-spider
  * Created by hezl on 2018-10-17.
  */
-public class StartConfig extends PageConfig{
+public class StartConfig extends PageConfig implements Serializable {
 
     private Map<String, Object> urls;
 

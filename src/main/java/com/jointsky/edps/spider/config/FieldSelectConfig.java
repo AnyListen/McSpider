@@ -2,12 +2,14 @@ package com.jointsky.edps.spider.config;
 
 import com.jointsky.edps.spider.common.SelectType;
 
+import java.io.Serializable;
+
 /**
  * edps-spider
  * edps-spider
  * Created by hezl on 2018-10-17.
  */
-public class FieldSelectConfig {
+public class FieldSelectConfig implements Serializable {
     private String filedName;
     private String configText;
     private SelectType selectType;
