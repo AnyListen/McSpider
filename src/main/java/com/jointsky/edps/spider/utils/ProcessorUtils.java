@@ -1,5 +1,6 @@
 package com.jointsky.edps.spider.utils;
 
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.log.StaticLog;
 import com.jointsky.edps.spider.common.SelectType;
 import com.jointsky.edps.spider.config.FieldSelectConfig;
@@ -15,6 +16,31 @@ import java.util.stream.Stream;
  * Created by hezl on 2018-10-18.
  */
 public class ProcessorUtils {
+
+    public static String getSelectStrVal(AbstractSelectable selectable, FieldSelectConfig fConfig){
+        Selectable selectVal = getSelectVal(null, selectable, fConfig.getConfigText(), fConfig.getSelectType(), fConfig.getGroup());
+        if (selectVal == null){
+            return null;
+        }
+        return selectVal.get();
+    }
+
+    public static String getSelectStrVal(AbstractSelectable selectable, List<FieldSelectConfig> fConfig){
+        String result = null;
+        for (FieldSelectConfig conf : fConfig) {
+            String val = getSelectStrVal(selectable, conf);
+            if (StrUtil.isBlank(val)) {
+                continue;
+            }
+            if (StrUtil.isBlank(result)) {
+                result = val;
+            }
+            else{
+                result += (";"+val);
+            }
+        }
+        return result;
+    }
 
     public static Selectable getSelectVal(AbstractSelectable selectable, FieldSelectConfig fConfig){
         return getSelectVal(null, selectable, fConfig.getConfigText(), fConfig.getSelectType(), fConfig.getGroup());

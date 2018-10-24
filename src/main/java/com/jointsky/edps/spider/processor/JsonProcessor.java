@@ -69,7 +69,7 @@ public class JsonProcessor implements PageProcessor {
         List<FieldSelectConfig> staticFields = pageConfig.getStaticFields();
         for (int i = 0; i < staticFields.size(); i++) {
             FieldSelectConfig fConfig = staticFields.get(i);
-            if (fConfig.getSelectType() != SelectType.NONE) {
+            if (fConfig.getSelectType() == SelectType.NONE) {
                 continue;
             }
             Selectable val = ProcessorUtils.getSelectVal(staticFields, selectable, fConfig);
@@ -126,7 +126,10 @@ public class JsonProcessor implements PageProcessor {
         if (!pageConfig.isJsonType() || !primaryKey.contains("*")){
             Map<String, Object> singleMap = new HashMap<>();
             resultMap.forEach((k,v)->{
-                if (v.size() == 1){
+                if (v.size() == 0){
+                    singleMap.put(k, null);
+                }
+                else if (v.size() == 1){
                     singleMap.put(k, v.get(0));
                 }
                 else{
@@ -193,7 +196,7 @@ public class JsonProcessor implements PageProcessor {
         List<ResultSelectConfig> fieldSelect = pageConfig.getResultFields();
         for (ResultSelectConfig config : fieldSelect) {
             List<ValueFilterConfig> filters = config.getFilters();
-            if (filters == null || filters.size() <= 0){
+            if (filters == null || filters.size() <= 0) {
                 continue;
             }
             Object val = resultMap.getOrDefault(config.getFiledName(), null);
@@ -204,7 +207,12 @@ public class JsonProcessor implements PageProcessor {
                 }
                 filter.setValue(val);
                 filter.setSettings(filterConfig.getSettingMap());
-                if (filter.shouldRemove()){
+                if (filter.shouldRemove()) {
+                    StaticLog.warn("字段 {} 不符合过滤规则：{}@{}：{}", config.getFiledName(),
+                            filterConfig.getClassName(),
+                            filterConfig.getSettingMap().get(SysConstant.SIMPLE_FILTER_METHOD),
+                            resultMap
+                    );
                     return;
                 }
                 val = filter.parseValue();

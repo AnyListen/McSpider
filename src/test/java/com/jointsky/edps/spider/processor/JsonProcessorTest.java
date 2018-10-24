@@ -3,6 +3,7 @@ package com.jointsky.edps.spider.processor;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.log.StaticLog;
 import com.jointsky.edps.spider.common.SelectType;
+import com.jointsky.edps.spider.common.SysConstant;
 import com.jointsky.edps.spider.config.*;
 import com.jointsky.edps.spider.utils.SpiderUtils;
 import org.junit.Test;
@@ -41,11 +42,10 @@ public class JsonProcessorTest {
         detailHtmlPage.setTargetUrl(true);
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("leader_nm", "leader_nm", SelectType.FIELD));
         ResultSelectConfig titleField = new ResultSelectConfig("title", "(?<=h-title\">\\s{0,30})[^<]+?(?=\\s*</div>)", SelectType.REGEX);
-//        HashMap<String, Object> titleFilterSetting = new HashMap<String, Object>() {{
-//            put(SysConstant.SIMPLE_FILTER_METHOD, SysConstant.EMPTY_FILTER);
-//        }};
-//        ValueFilterConfig titleFilter = new ValueFilterConfig().setClassName("com.jointsky.edps.spider.filter.SimpleValueFilter").setSettingMap(titleFilterSetting);
-//        titleField.getFilters().add(titleFilter);
+        ValueFilterConfig titleFilter = new ValueFilterConfig()
+                .setClassName("com.jointsky.edps.spider.filter.SimpleValueFilter")
+                .addSetting(SysConstant.SIMPLE_FILTER_METHOD, SysConstant.EMPTY_FILTER);
+        titleField.getFilters().add(titleFilter);
         detailHtmlPage.getResultFields().add(titleField);
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("summary", "(?<=description\" content=\")[^\"]+?(?=\")", SelectType.REGEX));
         PageConfig detailJsonPage = ObjectUtil.clone(detailHtmlPage);

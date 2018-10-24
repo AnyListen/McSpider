@@ -23,10 +23,11 @@ public class SimpleValueFilter extends ValueFilter {
         }
         String method = settings.get(SysConstant.SIMPLE_FILTER_METHOD).toString().toUpperCase();
         if (SysConstant.NULL_FILTER.equals(method)) {
-            return ObjectUtil.isNull(this.getValue());
+            return ObjectUtil.isNull(value);
         }
         if (SysConstant.EMPTY_FILTER.equals(method)) {
-            if (value instanceof CharSequence) return ((CharSequence) value).length() == 0;
+            if (ObjectUtil.isNull(value)) return true;
+            else if (value instanceof CharSequence) return ((CharSequence) value).length() == 0;
             else if (value instanceof Collection) return ((Collection) value).isEmpty();
             else if (value instanceof Map) return ((Map) value).isEmpty();
             else if (value.getClass().isArray()) return Array.getLength(value) == 0;

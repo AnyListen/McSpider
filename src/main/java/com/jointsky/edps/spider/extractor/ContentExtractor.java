@@ -1,4 +1,12 @@
-package com.jointsky.edps.spider.common;
+package com.jointsky.edps.spider.extractor;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
+import org.jsoup.nodes.TextNode;
+import org.jsoup.select.Elements;
+import org.jsoup.select.NodeVisitor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,66 +15,57 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import cn.hutool.http.HttpUtil;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Node;
-import org.jsoup.nodes.TextNode;
-import org.jsoup.select.Elements;
-import org.jsoup.select.NodeVisitor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import us.codecraft.webmagic.downloader.HttpClientDownloader;
-import us.codecraft.webmagic.selector.Html;
-
 /**
- * From https://raw.githubusercontent.com/CrawlScript/WebCollector/master/src/main/java/cn/edu/hfut/dmic/contentextractor/ContentExtractor.java
- * @author hu
+ * From https://github.com/CrawlScript/WebCollector
  */
 public class ContentExtractor {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ContentExtractor.class);
+    private static final String REMOVE_TAGS = "script,noscript,style,footer,foot,nav";
+    private Map<Element, CountInfo> infoMap = new HashMap<>();
+    private Document doc;
 
-    protected Document doc;
-
-    public ContentExtractor(Document doc) {
+    private ContentExtractor(Document doc) {
         this.doc = doc;
     }
 
-    protected HashMap<Element, CountInfo> infoMap = new HashMap<>();
+    private ContentExtractor(String html) {
+        this.doc = Jsoup.parse(html);
+    }
 
     class CountInfo {
         int textCount = 0;
         int linkTextCount = 0;
         int tagCount = 0;
         int linkTagCount = 0;
-        double density = 0;
+        double density = 0;         //密度
         double densitySum = 0;
-        double score = 0;
+        public double score = 0;
         int pCount = 0;
         ArrayList<Integer> leafList = new ArrayList<>();
+
+        void combineInfo(CountInfo countInfo){
+            this.textCount += countInfo.textCount;
+            this.linkTextCount += countInfo.linkTextCount;
+            this.tagCount += countInfo.tagCount;
+            this.linkTagCount += countInfo.linkTagCount;
+            this.leafList.addAll(countInfo.leafList);
+            this.densitySum += countInfo.density;
+            this.pCount += countInfo.pCount;
+        }
     }
 
-    protected void clean() {
-        doc.select("script,noscript,style,iframe,br").remove();
+    private void clean() {
+        if (doc != null){
+            doc.select(REMOVE_TAGS).remove();
+        }
     }
 
-    protected CountInfo computeInfo(Node node) {
-
+    private CountInfo computeCountInfo(Node node) {
         if (node instanceof Element) {
             Element tag = (Element) node;
-
             CountInfo countInfo = new CountInfo();
             for (Node childNode : tag.childNodes()) {
-                CountInfo childCountInfo = computeInfo(childNode);
-                countInfo.textCount += childCountInfo.textCount;
-                countInfo.linkTextCount += childCountInfo.linkTextCount;
-                countInfo.tagCount += childCountInfo.tagCount;
-                countInfo.linkTagCount += childCountInfo.linkTagCount;
-                countInfo.leafList.addAll(childCountInfo.leafList);
-                countInfo.densitySum += childCountInfo.density;
-                countInfo.pCount += childCountInfo.pCount;
+                countInfo.combineInfo(computeCountInfo(childNode));
             }
             countInfo.tagCount++;
             String tagName = tag.tagName();
@@ -76,7 +75,6 @@ public class ContentExtractor {
             } else if (tagName.equals("p")) {
                 countInfo.pCount++;
             }
-
             int pureLen = countInfo.textCount - countInfo.linkTextCount;
             int len = countInfo.tagCount - countInfo.linkTagCount;
             if (pureLen == 0 || len == 0) {
@@ -84,11 +82,11 @@ public class ContentExtractor {
             } else {
                 countInfo.density = (pureLen + 0.0) / len;
             }
-
             infoMap.put(tag, countInfo);
-
             return countInfo;
-        } else if (node instanceof TextNode) {
+        }
+
+        if (node instanceof TextNode) {
             TextNode tn = (TextNode) node;
             CountInfo countInfo = new CountInfo();
             String text = tn.text();
@@ -96,41 +94,43 @@ public class ContentExtractor {
             countInfo.textCount = len;
             countInfo.leafList.add(len);
             return countInfo;
-        } else {
-            return new CountInfo();
         }
+        return new CountInfo();
     }
 
-    protected double computeScore(Element tag) {
+
+    private double computeScore(Element tag) {
         CountInfo countInfo = infoMap.get(tag);
         double var = Math.sqrt(computeVar(countInfo.leafList) + 1);
-        double score = Math.log(var) * countInfo.densitySum * Math.log(countInfo.textCount - countInfo.linkTextCount + 1) * Math.log10(countInfo.pCount + 2);
-        return score;
+        return Math.log(var) * countInfo.densitySum * Math.log(countInfo.textCount - countInfo.linkTextCount + 1) * Math.log10(countInfo.pCount + 2);
     }
 
-    protected double computeVar(ArrayList<Integer> data) {
+    /**
+     * 计算 VAR（variance）方差
+     */
+    private double computeVar(ArrayList<Integer> data) {
         if (data.size() == 0) {
             return 0;
         }
         if (data.size() == 1) {
-            return data.get(0) / 2;
+            return data.get(0) / 2.0;
         }
         double sum = 0;
         for (Integer i : data) {
             sum += i;
         }
-        double ave = sum / data.size();
+        double avg = sum / data.size();
         sum = 0;
         for (Integer i : data) {
-            sum += (i - ave) * (i - ave);
+            sum += (i - avg) * (i - avg);
         }
         sum = sum / data.size();
         return sum;
     }
 
-    public Element getContentElement() throws Exception {
+    private Element getContentElement(){
         clean();
-        computeInfo(doc.body());
+        computeCountInfo(doc.body());
         double maxScore = 0;
         Element content = null;
         for (Map.Entry<Element, CountInfo> entry : infoMap.entrySet()) {
@@ -144,47 +144,16 @@ public class ContentExtractor {
                 content = tag;
             }
         }
-        if (content == null) {
-            throw new Exception("extraction failed");
-        }
         return content;
     }
 
-    protected String getTime(Element contentElement) throws Exception {
+    private String getTime(Element contentElement) {
         String regex = "([1-2][0-9]{3})[^0-9]{1,5}?([0-1]?[0-9])[^0-9]{1,5}?([0-9]{1,2})[^0-9]{1,5}?([0-2]?[1-9])[^0-9]{1,5}?([0-9]{1,2})[^0-9]{1,5}?([0-9]{1,2})";
         Pattern pattern = Pattern.compile(regex);
-        Element current = contentElement;
-        for (int i = 0; i < 2; i++) {
-            if (current != null && current != doc.body()) {
-                Element parent = current.parent();
-                if (parent != null) {
-                    current = parent;
-                }
-            }
-        }
-        for (int i = 0; i < 6; i++) {
-            if (current == null) {
-                break;
-            }
-            String currentHtml = current.outerHtml();
-            Matcher matcher = pattern.matcher(currentHtml);
-            if (matcher.find()) {
-                return matcher.group(1) + "-" + matcher.group(2) + "-" + matcher.group(3) + " " + matcher.group(4) + ":" + matcher.group(5) + ":" + matcher.group(6);
-            }
-            if (current != doc.body()) {
-                current = current.parent();
-            }
-        }
-
-        try {
-            return getDate(contentElement);
-        } catch (Exception ex) {
-            throw new Exception("time not found");
-        }
-
+        return "";
     }
 
-    protected String getDate(Element contentElement) throws Exception {
+    private String getDate(Element contentElement) throws Exception {
         String regex = "([1-2][0-9]{3})[^0-9]{1,5}?([0-1]?[0-9])[^0-9]{1,5}?([0-9]{1,2})";
         Pattern pattern = Pattern.compile(regex);
         Element current = contentElement;
@@ -212,7 +181,7 @@ public class ContentExtractor {
         throw new Exception("date not found");
     }
 
-    protected double strSim(String a, String b) {
+    private double strSim(String a, String b) {
         int len1 = a.length();
         int len2 = b.length();
         if (len1 == 0 || len2 == 0) {
@@ -230,7 +199,7 @@ public class ContentExtractor {
         return (lcs(a, b) + 0.0) / Math.max(len1, len2);
     }
 
-    protected String getTitle(final Element contentElement) throws Exception {
+    private String getTitle(final Element contentElement){
         final ArrayList<Element> titleList = new ArrayList<>();
         final ArrayList<Double> titleSim = new ArrayList<>();
         final AtomicInteger contentIndex = new AtomicInteger();
@@ -278,29 +247,21 @@ public class ContentExtractor {
 
         Elements titles = doc.body().select("*[id^=title],*[id$=title],*[class^=title],*[class$=title]");
         if (titles.size() > 0) {
-            String title = titles.first().text();
-            if (title.length() > 5 && title.length()<40) {
+            String title = titles.first().text().trim();
+            if (title.length() > 5 && title.length() < 40) {
                 return titles.first().text();
             }
         }
-        try {
-            return getTitleByEditDistance(contentElement);
-        } catch (Exception ex) {
-            throw new Exception("title not found");
-        }
-
+        return getTitleByEditDistance(contentElement);
     }
 
-    protected String getTitleByEditDistance(Element contentElement) throws Exception {
+    private String getTitleByEditDistance(Element contentElement){
         final String metaTitle = doc.title();
-
         final ArrayList<Double> max = new ArrayList<>();
         max.add(0.0);
         final StringBuilder sb = new StringBuilder();
         doc.body().traverse(new NodeVisitor() {
-
             public void head(Node node, int i) {
-
                 if (node instanceof TextNode) {
                     TextNode tn = (TextNode) node;
                     String text = tn.text().trim();
@@ -312,7 +273,6 @@ public class ContentExtractor {
                             sb.append(text);
                         }
                     }
-
                 }
             }
 
@@ -322,12 +282,10 @@ public class ContentExtractor {
         if (sb.length() > 0) {
             return sb.toString();
         }
-        throw new Exception();
-
+        return metaTitle;
     }
 
-    protected int lcs(String x, String y) {
-
+    private int lcs(String x, String y) {
         int M = x.length();
         int N = y.length();
         if (M == 0 || N == 0) {
@@ -344,25 +302,19 @@ public class ContentExtractor {
                 }
             }
         }
-
         return opt[0][0];
-
     }
 
-    protected int editDistance(String word1, String word2) {
+    private int editDistance(String word1, String word2) {
         int len1 = word1.length();
         int len2 = word2.length();
-
         int[][] dp = new int[len1 + 1][len2 + 1];
-
         for (int i = 0; i <= len1; i++) {
             dp[i][0] = i;
         }
-
         for (int j = 0; j <= len2; j++) {
             dp[0][j] = j;
         }
-
         for (int i = 0; i < len1; i++) {
             char c1 = word1.charAt(i);
             for (int j = 0; j < len2; j++) {
@@ -381,51 +333,13 @@ public class ContentExtractor {
                 }
             }
         }
-
         return dp[len1][len2];
     }
 
-    /*输入Jsoup的Document，获取正文所在Element*/
-    public static Element getContentElementByDoc(Document doc) throws Exception {
-        ContentExtractor ce = new ContentExtractor(doc);
-        return ce.getContentElement();
-    }
-
-    /*输入HTML，获取正文所在Element*/
-    public static Element getContentElementByHtml(String html) throws Exception {
-        Document doc = Jsoup.parse(html);
-        return getContentElementByDoc(doc);
-    }
-
-    /*输入HTML和URL，获取正文所在Element*/
-    public static Element getContentElementByHtml(String html, String url) throws Exception {
-        Document doc = Jsoup.parse(html, url);
-        return getContentElementByDoc(doc);
-    }
-
-    /*输入Jsoup的Document，获取正文文本*/
-    public static String getContentByDoc(Document doc) throws Exception {
-        ContentExtractor ce = new ContentExtractor(doc);
-        return ce.getContentElement().text();
-    }
-
-    /*输入HTML，获取正文文本*/
-    public static String getContentByHtml(String html) throws Exception {
-        Document doc = Jsoup.parse(html);
-        return getContentElementByDoc(doc).text();
-    }
-
-    /*输入HTML和URL，获取正文文本*/
-    public static String getContentByHtml(String html, String url) throws Exception {
-        Document doc = Jsoup.parse(html, url);
-        return getContentElementByDoc(doc).text();
-    }
-
     public static void main(String[] args) throws Exception {
-        HttpClientDownloader downloader = new HttpClientDownloader();
-        String url = "http://www.xinhuanet.com/politics/xxjxs/2018-09/07/c_1123397206.htm";
-        Html html = downloader.download(url);
-        Element element = ContentExtractor.getContentElementByHtml(html.getDocument().html(), url);
+        Document doc = Jsoup.connect("http://world.people.com.cn/n1/2018/1016/c1002-30342848.html").get();
+        System.out.println(doc.title());
+        Element element = ContentExtractor.getContentElementByDoc(doc);
         System.out.println("************************************************");
         System.out.println(element.html());
     }

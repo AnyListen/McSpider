@@ -1,5 +1,6 @@
-package com.jointsky.edps.spider.common;
+package com.jointsky.edps.spider.extractor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -19,6 +20,13 @@ public class HtmlArticle {
     private List<String> phrase;
     private String summary;
     private List<String> images;
+
+
+    public HtmlArticle(){
+        this.keyword = new ArrayList<>();
+        this.phrase = new ArrayList<>();
+        this.images = new ArrayList<>();
+    }
 
     public String getId() {
         return id;
