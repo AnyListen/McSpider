@@ -41,13 +41,17 @@ public class JsonProcessorTest {
         PageConfig detailHtmlPage = new PageConfig();
         detailHtmlPage.setTargetUrl(true);
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("leader_nm", "leader_nm", SelectType.FIELD));
-        ResultSelectConfig titleField = new ResultSelectConfig("title", "(?<=h-title\">\\s{0,30})[^<]+?(?=\\s*</div>)", SelectType.REGEX);
+        ResultSelectConfig titleField = new ResultSelectConfig("title", SysConstant.TITLE, SelectType.ARTICLE);
         ValueFilterConfig titleFilter = new ValueFilterConfig()
                 .setClassName("com.jointsky.edps.spider.filter.SimpleValueFilter")
                 .addSetting(SysConstant.SIMPLE_FILTER_METHOD, SysConstant.EMPTY_FILTER);
         titleField.getFilters().add(titleFilter);
         detailHtmlPage.getResultFields().add(titleField);
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("summary", "(?<=description\" content=\")[^\"]+?(?=\")", SelectType.REGEX));
+        detailHtmlPage.getResultFields().add(new ResultSelectConfig("html", SysConstant.HTML, SelectType.ARTICLE));
+        detailHtmlPage.getResultFields().add(new ResultSelectConfig("keyword", SysConstant.KEYWORD, SelectType.ARTICLE));
+        detailHtmlPage.getResultFields().add(new ResultSelectConfig("img_arr", SysConstant.IMAGE, SelectType.ARTICLE));
+        detailHtmlPage.getResultFields().add(new ResultSelectConfig("content", SysConstant.CONTENT, SelectType.ARTICLE));
         PageConfig detailJsonPage = ObjectUtil.clone(detailHtmlPage);
         detailHtmlPage.setTargetUrl(true);
         //endregion

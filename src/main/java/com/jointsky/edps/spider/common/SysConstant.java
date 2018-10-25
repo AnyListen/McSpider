@@ -26,6 +26,9 @@ public class SysConstant {
     public static final String SIMPLE_FILTER_TYPE = "SIMPLE_FILTER_TYPE";
 
 
+    public static final String ID = "ID";
+    public static final String URL = "URL";
+    public static final String DOMAIN = "DOMAIN";
     public static final String TITLE = "TITLE";
     public static final String SUMMARY = "SUMMARY";
     public static final String KEYWORD = "KEYWORD";

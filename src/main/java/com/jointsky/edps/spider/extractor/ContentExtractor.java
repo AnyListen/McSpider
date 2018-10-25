@@ -1,5 +1,10 @@
 package com.jointsky.edps.spider.extractor;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.crypto.SecureUtil;
+import cn.hutool.http.HtmlUtil;
+import com.hankcs.hanlp.HanLP;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -7,9 +12,14 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.jsoup.select.NodeVisitor;
+import us.codecraft.webmagic.selector.Html;
+import us.codecraft.webmagic.utils.UrlUtils;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
@@ -98,7 +108,6 @@ public class ContentExtractor {
         return new CountInfo();
     }
 
-
     private double computeScore(Element tag) {
         CountInfo countInfo = infoMap.get(tag);
         double var = Math.sqrt(computeVar(countInfo.leafList) + 1);
@@ -150,10 +159,32 @@ public class ContentExtractor {
     private String getTime(Element contentElement) {
         String regex = "([1-2][0-9]{3})[^0-9]{1,5}?([0-1]?[0-9])[^0-9]{1,5}?([0-9]{1,2})[^0-9]{1,5}?([0-2]?[1-9])[^0-9]{1,5}?([0-9]{1,2})[^0-9]{1,5}?([0-9]{1,2})";
         Pattern pattern = Pattern.compile(regex);
-        return "";
+        Element current = contentElement;
+        for (int i = 0; i < 2; i++) {
+            if (current != null && current != doc.body()) {
+                Element parent = current.parent();
+                if (parent != null) {
+                    current = parent;
+                }
+            }
+        }
+        for (int i = 0; i < 6; i++) {
+            if (current == null) {
+                break;
+            }
+            String currentHtml = current.outerHtml();
+            Matcher matcher = pattern.matcher(currentHtml);
+            if (matcher.find()) {
+                return matcher.group(1) + "-" + matcher.group(2) + "-" + matcher.group(3) + " " + matcher.group(4) + ":" + matcher.group(5) + ":" + matcher.group(6);
+            }
+            if (current != doc.body()) {
+                current = current.parent();
+            }
+        }
+        return getDate(contentElement);
     }
 
-    private String getDate(Element contentElement) throws Exception {
+    private String getDate(Element contentElement) {
         String regex = "([1-2][0-9]{3})[^0-9]{1,5}?([0-1]?[0-9])[^0-9]{1,5}?([0-9]{1,2})";
         Pattern pattern = Pattern.compile(regex);
         Element current = contentElement;
@@ -178,7 +209,7 @@ public class ContentExtractor {
                 current = current.parent();
             }
         }
-        throw new Exception("date not found");
+        return null;
     }
 
     private double strSim(String a, String b) {
@@ -336,12 +367,61 @@ public class ContentExtractor {
         return dp[len1][len2];
     }
 
-    public static void main(String[] args) throws Exception {
-        Document doc = Jsoup.connect("http://world.people.com.cn/n1/2018/1016/c1002-30342848.html").get();
-        System.out.println(doc.title());
-        Element element = ContentExtractor.getContentElementByDoc(doc);
-        System.out.println("************************************************");
-        System.out.println(element.html());
+    public static HtmlArticle getArticle(String html){
+        return getArticle(new Html(html));
     }
 
+    public static HtmlArticle getArticle(String html, String baseUrl){
+        return getArticle(new Html(html, baseUrl));
+    }
+
+    private static final Pattern imgPattern = Pattern.compile("<img[^>]+?src=['\"]([^\"']+)");
+    public static HtmlArticle getArticle(Html html){
+        String baseUri = html.getDocument().baseUri();
+        Document document = html.getDocument();
+        ContentExtractor extractor = new ContentExtractor(document);
+        HtmlArticle article = new HtmlArticle();
+        if (StrUtil.isNotBlank(baseUri) && baseUri.startsWith("http")){
+            article.setId(SecureUtil.md5(baseUri));
+            article.setUrl(baseUri);
+            article.setDomain(UrlUtils.getDomain(baseUri));
+        }
+        article.setTitle(extractor.getTitle(document));
+        article.setTime(extractor.getTime(document));
+        Element contentElement = extractor.getContentElement();
+        try {
+            article.setHtml(fixUrl(baseUri, contentElement.html()));
+        } catch (MalformedURLException e) {
+            article.setHtml(contentElement.html());
+        }
+        article.setContent(HtmlUtil.cleanHtmlTag(article.getHtml()).replaceAll("[ \\t]+"," ").replaceAll("[\\r\\n]+","\n").trim());
+        article.setKeyword(CollUtil.join(HanLP.extractPhrase(article.getContent(), 5), "；"));
+        article.setSummary(CollUtil.join(HanLP.extractSummary(article.getContent(), 3, "。？！!?"), ""));
+        List<String> imgList = new ArrayList<>();
+        Matcher matcher = imgPattern.matcher(article.getHtml());
+        while (matcher.find()){
+            imgList.add(matcher.group(1));
+        }
+        article.setImages(CollUtil.join(imgList, "；"));
+        return article;
+    }
+
+    private static String fixUrl(String baseUrl, String html) throws MalformedURLException {
+        Pattern pattern = Pattern.compile("(href|src)=[\"']([^\"']+)[\"']",Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+        Matcher matcher = pattern.matcher(html);
+        URL absoluteUrl = new URL(baseUrl);
+        while (matcher.find()){
+            String link = matcher.group(2);
+            if (link.startsWith("//")){
+                html = html.replace(link, (baseUrl.toLowerCase().startsWith("https")? "https:":"http:")+link);
+                continue;
+            }
+            if (link.startsWith("http") || link.startsWith("#") || link.startsWith("javascript")){
+                continue;
+            }
+            URL parseUrl = new URL(absoluteUrl, link);
+            html = html.replace(link, parseUrl.toString());
+        }
+        return html;
+    }
 }

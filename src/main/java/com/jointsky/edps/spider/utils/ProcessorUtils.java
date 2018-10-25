@@ -2,10 +2,12 @@ package com.jointsky.edps.spider.utils;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.log.StaticLog;
+import com.jointsky.edps.spider.common.Html;
 import com.jointsky.edps.spider.common.SelectType;
 import com.jointsky.edps.spider.config.FieldSelectConfig;
 import us.codecraft.webmagic.selector.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -23,6 +25,18 @@ public class ProcessorUtils {
             return null;
         }
         return selectVal.get();
+    }
+
+    public static List<String> getSelectValList(AbstractSelectable selectable, List<FieldSelectConfig> fConfig){
+        List<String> resultList = new ArrayList<>();
+        for (FieldSelectConfig conf : fConfig) {
+            String val = getSelectStrVal(selectable, conf);
+            if (StrUtil.isBlank(val)) {
+                continue;
+            }
+            resultList.add(val);
+        }
+        return resultList;
     }
 
     public static String getSelectStrVal(AbstractSelectable selectable, List<FieldSelectConfig> fConfig){
@@ -81,6 +95,15 @@ public class ProcessorUtils {
                             FieldSelectConfig config = first.get();
                             value = new PlainText(config.getConfigText());
                         }
+                    }
+                    break;
+                case NONE:
+                    value = new PlainText(selConfig);
+                    break;
+                case ARTICLE:
+                    if (selectable instanceof Html){
+                        Html html = (Html)selectable;
+                        value = html.article(selConfig);
                     }
                     break;
                 default:

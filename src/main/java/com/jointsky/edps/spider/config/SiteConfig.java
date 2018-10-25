@@ -40,7 +40,7 @@ public class SiteConfig implements Serializable {
         this.siteName = siteName;
         this.pipelines = new ArrayList<>();
         this.header = new HashMap<>();
-        this.downloader = "us.codecraft.webmagic.downloader.HttpClientDownloader";
+        this.downloader = "com.jointsky.edps.spider.downloader.DefaultDownloader";
         this.scheduler = "us.codecraft.webmagic.scheduler.PriorityScheduler";
     }
 

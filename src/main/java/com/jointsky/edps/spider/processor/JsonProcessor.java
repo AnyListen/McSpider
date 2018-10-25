@@ -89,10 +89,12 @@ public class JsonProcessor implements PageProcessor {
      */
     private void dealTargetUrl(Page page, AbstractSelectable selectable, PageConfig pageConfig) {
         if (!pageConfig.isTargetUrl()){
+            page.setSkip(true);
             return;
         }
         List<ResultSelectConfig> fieldSelect = pageConfig.getResultFields();
         if (fieldSelect == null || fieldSelect.size() <=0){
+            page.setSkip(true);
             return;
         }
         String primaryKey = "";     //包含 * 的 JsonPath 作为循环的依据

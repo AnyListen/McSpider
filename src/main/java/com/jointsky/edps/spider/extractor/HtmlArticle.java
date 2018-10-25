@@ -1,8 +1,5 @@
 package com.jointsky.edps.spider.extractor;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * edps-spider
  * edps-spider
@@ -11,22 +8,15 @@ import java.util.List;
 public class HtmlArticle {
     private String id;
     private String url;
+    private String domain;
     private String title;
     private String time;
     private String content;
     private String html;
     private String simHash;
-    private List<String> keyword;
-    private List<String> phrase;
+    private String keyword;
     private String summary;
-    private List<String> images;
-
-
-    public HtmlArticle(){
-        this.keyword = new ArrayList<>();
-        this.phrase = new ArrayList<>();
-        this.images = new ArrayList<>();
-    }
+    private String images;
 
     public String getId() {
         return id;
@@ -84,20 +74,12 @@ public class HtmlArticle {
         this.simHash = simHash;
     }
 
-    public List<String> getKeyword() {
+    public String getKeyword() {
         return keyword;
     }
 
-    public void setKeyword(List<String> keyword) {
+    public void setKeyword(String keyword) {
         this.keyword = keyword;
-    }
-
-    public List<String> getPhrase() {
-        return phrase;
-    }
-
-    public void setPhrase(List<String> phrase) {
-        this.phrase = phrase;
     }
 
     public String getSummary() {
@@ -108,11 +90,19 @@ public class HtmlArticle {
         this.summary = summary;
     }
 
-    public List<String> getImages() {
+    public String getImages() {
         return images;
     }
 
-    public void setImages(List<String> images) {
+    public void setImages(String images) {
         this.images = images;
+    }
+
+    public String getDomain() {
+        return domain;
+    }
+
+    public void setDomain(String domain) {
+        this.domain = domain;
     }
 }

@@ -5,6 +5,7 @@ import cn.hutool.log.StaticLog;
 import com.jointsky.edps.spider.common.SysConstant;
 import com.jointsky.edps.spider.config.SiteConfig;
 import com.jointsky.edps.spider.filter.ValueFilter;
+import com.jointsky.edps.spider.pipeline.JsonConsolePipeline;
 import com.jointsky.edps.spider.processor.JsonProcessor;
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
@@ -66,7 +67,7 @@ public class SpiderUtils {
         List<Pipeline> pipelines = new ArrayList<>();
         List<String> strList = siteConfig.getPipelines();
         if (strList == null || strList.size() <= 0){
-            pipelines.add(new ConsolePipeline());
+            pipelines.add(new JsonConsolePipeline());
             return pipelines;
         }
         strList.forEach(s-> {
