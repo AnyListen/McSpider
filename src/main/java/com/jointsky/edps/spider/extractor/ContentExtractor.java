@@ -394,7 +394,7 @@ public class ContentExtractor {
         } catch (MalformedURLException e) {
             article.setHtml(contentElement.html());
         }
-        article.setContent(HtmlUtil.cleanHtmlTag(article.getHtml()).replaceAll("[ \\t]+"," ").replaceAll("[\\r\\n]+","\n").trim());
+        article.setContent(cleanHtml(article.getHtml()));
         article.setKeyword(CollUtil.join(HanLP.extractPhrase(article.getContent(), 5), "；"));
         article.setSummary(CollUtil.join(HanLP.extractSummary(article.getContent(), 3, "。？！!?"), ""));
         List<String> imgList = new ArrayList<>();
@@ -406,6 +406,12 @@ public class ContentExtractor {
         return article;
     }
 
+    /**
+     * 基于 baseUrl，补全 html 代码中的链接
+     * @param baseUrl 网页源代码地址
+     * @param html 网页源代码
+     * @throws MalformedURLException URL Exception
+     */
     private static String fixUrl(String baseUrl, String html) throws MalformedURLException {
         Pattern pattern = Pattern.compile("(href|src)=[\"']([^\"']+)[\"']",Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
         Matcher matcher = pattern.matcher(html);
@@ -423,5 +429,13 @@ public class ContentExtractor {
             html = html.replace(link, parseUrl.toString());
         }
         return html;
+    }
+
+    private static String cleanHtml(String html){
+        html = HtmlUtil.unescape(html);
+        html = HtmlUtil.cleanHtmlTag(html);
+        html = html.replaceAll("[ \\t]+"," ").replaceAll("[\\r\\n]+","\n");
+        html = html.replaceAll("( *\\n *)+","\n");
+        return html.trim();
     }
 }

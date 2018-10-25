@@ -5,6 +5,7 @@ import cn.hutool.log.StaticLog;
 import com.jointsky.edps.spider.common.SelectType;
 import com.jointsky.edps.spider.common.SysConstant;
 import com.jointsky.edps.spider.config.*;
+import com.jointsky.edps.spider.extractor.ExtractorConfig;
 import com.jointsky.edps.spider.utils.SpiderUtils;
 import org.junit.Test;
 import us.codecraft.webmagic.Spider;
@@ -52,6 +53,8 @@ public class JsonProcessorTest {
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("keyword", SysConstant.KEYWORD, SelectType.ARTICLE));
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("img_arr", SysConstant.IMAGE, SelectType.ARTICLE));
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("content", SysConstant.CONTENT, SelectType.ARTICLE));
+        detailHtmlPage.getResultFields().add(new ResultSelectConfig("publish_dtm", SysConstant.TIME, SelectType.ARTICLE));
+        detailHtmlPage.getResultFields().add(new ResultSelectConfig("id", SysConstant.ID, SelectType.ARTICLE));
         PageConfig detailJsonPage = ObjectUtil.clone(detailHtmlPage);
         detailHtmlPage.setTargetUrl(true);
         //endregion
@@ -84,10 +87,12 @@ public class JsonProcessorTest {
         targetHtmlPage.getStaticFields().add(new FieldSelectConfig("leader_nm", "(?<=<title>\\s{0,30})\\S+?(?=报道)", SelectType.REGEX));
         targetHtmlPage.setNextHelpConfig(jsonTargetPage);
 
-
         leaderHelpPage.setNextHelpConfig(targetHtmlPage);
         startConfig.setNextHelpConfig(leaderHelpPage);
 
+        ExtractorConfig extractorConfig = new ExtractorConfig();
+        FieldSelectConfig timeSelect = new FieldSelectConfig("time", "class=\"h-time\">\\s*([^<]+)\\s*<", SelectType.REGEX, 1);
+        extractorConfig.setTimeSelect(timeSelect);
 
         SiteConfig siteConfig = new SiteConfig("xh-leader", "新华网-领导讲话");
         siteConfig.setCharset("UTF-8").setExitWhenComplete(true).setStartPage(startConfig);
