@@ -1,5 +1,7 @@
 package com.jointsky.edps.spider.config;
 
+import com.jointsky.edps.spider.extractor.ExtractorConfig;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +44,11 @@ public class PageConfig implements Serializable {
      * 新 TargetUrl 的配置
      */
     private PageConfig nextTargetConfig;
+
+    /**
+     * 页面基本属性抓取配置
+     */
+    private ExtractorConfig extractorConfig;
 
     public PageConfig() {
         this.jsonType = false;
@@ -114,5 +121,13 @@ public class PageConfig implements Serializable {
 
     public void setNextTargetConfig(PageConfig nextTargetConfig) {
         this.nextTargetConfig = nextTargetConfig;
+    }
+
+    public ExtractorConfig getExtractorConfig() {
+        return extractorConfig;
+    }
+
+    public void setExtractorConfig(ExtractorConfig extractorConfig) {
+        this.extractorConfig = extractorConfig;
     }
 }

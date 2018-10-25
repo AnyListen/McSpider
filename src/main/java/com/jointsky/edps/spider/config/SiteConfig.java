@@ -1,5 +1,7 @@
 package com.jointsky.edps.spider.config;
 
+import com.jointsky.edps.spider.extractor.ExtractorConfig;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;

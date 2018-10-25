@@ -39,8 +39,13 @@ public class JsonProcessorTest {
         leaderHelpPage.getHelpSelect().add(new HelpSelectConfig(false, "http://www.xinhuanet.com/politics/leaders/\\w+/hyhd.htm", SelectType.REGEX));
 
         //region 结果页面内容提取
+        ExtractorConfig extractorConfig = new ExtractorConfig();
+        FieldSelectConfig timeSelect = new FieldSelectConfig("time", "class=\"h-time\">\\s*([^<]+)\\s*<", SelectType.REGEX, 1);
+        extractorConfig.setTimeSelect(timeSelect);
+
         PageConfig detailHtmlPage = new PageConfig();
         detailHtmlPage.setTargetUrl(true);
+        detailHtmlPage.setExtractorConfig(extractorConfig);
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("leader_nm", "leader_nm", SelectType.FIELD));
         ResultSelectConfig titleField = new ResultSelectConfig("title", SysConstant.TITLE, SelectType.ARTICLE);
         ValueFilterConfig titleFilter = new ValueFilterConfig()
@@ -55,6 +60,7 @@ public class JsonProcessorTest {
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("content", SysConstant.CONTENT, SelectType.ARTICLE));
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("publish_dtm", SysConstant.TIME, SelectType.ARTICLE));
         detailHtmlPage.getResultFields().add(new ResultSelectConfig("id", SysConstant.ID, SelectType.ARTICLE));
+        detailHtmlPage.getResultFields().add(new ResultSelectConfig("url", SysConstant.URL, SelectType.ARTICLE));
         PageConfig detailJsonPage = ObjectUtil.clone(detailHtmlPage);
         detailHtmlPage.setTargetUrl(true);
         //endregion
@@ -89,10 +95,6 @@ public class JsonProcessorTest {
 
         leaderHelpPage.setNextHelpConfig(targetHtmlPage);
         startConfig.setNextHelpConfig(leaderHelpPage);
-
-        ExtractorConfig extractorConfig = new ExtractorConfig();
-        FieldSelectConfig timeSelect = new FieldSelectConfig("time", "class=\"h-time\">\\s*([^<]+)\\s*<", SelectType.REGEX, 1);
-        extractorConfig.setTimeSelect(timeSelect);
 
         SiteConfig siteConfig = new SiteConfig("xh-leader", "新华网-领导讲话");
         siteConfig.setCharset("UTF-8").setExitWhenComplete(true).setStartPage(startConfig);

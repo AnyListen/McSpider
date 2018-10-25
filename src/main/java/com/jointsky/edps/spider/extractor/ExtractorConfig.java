@@ -2,6 +2,7 @@ package com.jointsky.edps.spider.extractor;
 
 import com.jointsky.edps.spider.config.FieldSelectConfig;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,7 +11,7 @@ import java.util.List;
  * edps-spider
  * Created by hezl on 2018-10-24.
  */
-public class ExtractorConfig {
+public class ExtractorConfig implements Serializable {
     private FieldSelectConfig titleSelect;
     private List<FieldSelectConfig> summarySelect;
     private List<FieldSelectConfig> keywordSelect;

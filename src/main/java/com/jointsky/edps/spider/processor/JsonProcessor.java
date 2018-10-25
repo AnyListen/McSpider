@@ -53,6 +53,9 @@ public class JsonProcessor implements PageProcessor {
             return;
         }
         PageConfig pageConfig = ObjectUtil.clone((PageConfig) extra);
+        if (page instanceof com.jointsky.edps.spider.common.Page){
+            ((com.jointsky.edps.spider.common.Page)page).setExtractorConfig(pageConfig.getExtractorConfig());
+        }
         AbstractSelectable selectable = pageConfig.isJsonType() ? page.getJson() : page.getHtml();
         dealStaticFields(selectable, pageConfig);
         dealHelpSelect(page, selectable, pageConfig);
