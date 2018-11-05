@@ -1,156 +1,159 @@
-//package com.jointsky.edps.spider.scheduler;
-//
-//import com.jointsky.edps.spider.utils.H2Helper;
-//import us.codecraft.webmagic.Request;
-//import us.codecraft.webmagic.Task;
-//import us.codecraft.webmagic.scheduler.DuplicateRemovedScheduler;
-//import us.codecraft.webmagic.scheduler.MonitorableScheduler;
-//import us.codecraft.webmagic.scheduler.Scheduler;
-//
-//import java.io.FileWriter;
-//import java.io.PrintWriter;
-//import java.util.LinkedHashSet;
-//import java.util.concurrent.*;
-//import java.util.concurrent.atomic.AtomicBoolean;
-//import java.util.concurrent.atomic.AtomicInteger;
-//
-///**
-// * edps-spider
-// * edps-spider
-// * Created by hezl on 2018-10-29.
-// */
-//public class H2Scheduler extends DuplicateRemovedScheduler implements MonitorableScheduler, Scheduler {
-//
-//    private AtomicBoolean inited = new AtomicBoolean(false);
-//
-//    private BlockingQueue<Request> queue;
-//
-//    private ScheduledExecutorService flushThreadPool;
-//
-//    public H2Scheduler() {
-//        initDuplicateRemover();
-//    }
-//
-//    private void initDuplicateRemover() {
-//        setDuplicateRemover(new BloomFilterDuplicateRemover(10000000){
-//            @Override
-//            public boolean isDuplicate(Request request, Task task) {
-//                if (!inited.get()) {
-//                    initTask(task);
-//                }
-//                return super.isDuplicate(request, task);
-//            }
-//        });
-//    }
-//
-//    private void initTask(Task task) {
-//        String tbName = task.getUUID();
-//        H2Helper.getTotalNum()
-//
-//
-//
-//    }
-//
-//    private void initFlushThread() {
-//        flushThreadPool = Executors.newScheduledThreadPool(1);
-//        flushThreadPool.scheduleAtFixedRate(this::flush, 10, 10, TimeUnit.SECONDS);
-//    }
-//
-//    private void initWriter() {
-//        try {
-//            fileUrlWriter = new PrintWriter(new FileWriter(getFileName(fileUrlAllName), true));
-//            fileCursorWriter = new PrintWriter(new FileWriter(getFileName(fileCursor), false));
-//        } catch (IOException e) {
-//            throw new RuntimeException("init cache scheduler error", e);
-//        }
-//    }
-//
-//    private void readFile() {
-//        try {
-//            queue = new LinkedBlockingQueue<Request>();
-//            urls = new LinkedHashSet<String>();
-//            readCursorFile();
-//            readUrlFile();
-//            // initDuplicateRemover();
-//        } catch (FileNotFoundException e) {
-//            //init
-//            logger.info("init cache file " + getFileName(fileUrlAllName));
-//        } catch (IOException e) {
-//            logger.error("init file error", e);
-//        }
-//    }
-//
-//    private void readUrlFile() throws IOException {
-//        String line;
-//        BufferedReader fileUrlReader = null;
-//        try {
-//            fileUrlReader = new BufferedReader(new FileReader(getFileName(fileUrlAllName)));
-//            int lineReaded = 0;
-//            while ((line = fileUrlReader.readLine()) != null) {
-//                urls.add(line.trim());
-//                lineReaded++;
-//                if (lineReaded > cursor.get()) {
-//                    queue.add(new Request(line));
-//                }
-//            }
-//        } finally {
-//            if (fileUrlReader != null) {
-//                IOUtils.closeQuietly(fileUrlReader);
-//            }
-//        }
-//    }
-//
-//    private void readCursorFile() throws IOException {
-//        BufferedReader fileCursorReader = null;
-//        try {
-//            fileCursorReader = new BufferedReader(new FileReader(getFileName(fileCursor)));
-//            String line;
-//            //read the last number
-//            while ((line = fileCursorReader.readLine()) != null) {
-//                cursor = new AtomicInteger(NumberUtils.toInt(line));
-//            }
-//        } finally {
-//            if (fileCursorReader != null) {
-//                IOUtils.closeQuietly(fileCursorReader);
-//            }
-//        }
-//    }
-//
-//    public void close() throws IOException {
-//        flushThreadPool.shutdown();
-//        fileUrlWriter.close();
-//        fileCursorWriter.close();
-//    }
-//
-//    private String getFileName(String filename) {
-//        return filePath + task.getUUID() + filename;
-//    }
-//
-//    @Override
-//    protected void pushWhenNoDuplicate(Request request, Task task) {
-//        if (!inited.get()) {
-//            init(task);
-//        }
-//        queue.add(request);
-//        fileUrlWriter.println(request.getUrl());
-//    }
-//
-//    @Override
-//    public synchronized Request poll(Task task) {
-//        if (!inited.get()) {
-//            init(task);
-//        }
-//        fileCursorWriter.println(cursor.incrementAndGet());
-//        return queue.poll();
-//    }
-//
-//    @Override
-//    public int getLeftRequestsCount(Task task) {
-//        return queue.size();
-//    }
-//
-//    @Override
-//    public int getTotalRequestsCount(Task task) {
-//        return getDuplicateRemover().getTotalRequestsCount(task);
-//    }
-//}
+package com.jointsky.edps.spider.scheduler;
+
+import cn.hutool.core.codec.Base64Decoder;
+import cn.hutool.core.codec.Base64Encoder;
+import cn.hutool.crypto.SecureUtil;
+import cn.hutool.db.Db;
+import cn.hutool.db.Entity;
+import cn.hutool.log.StaticLog;
+import com.alibaba.fastjson.JSON;
+import com.jointsky.edps.spider.common.SysConstant;
+import us.codecraft.webmagic.Request;
+import us.codecraft.webmagic.Task;
+
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * edps-spider
+ * edps-spider
+ * Created by hezl on 2018-10-29.
+ */
+public class H2Scheduler extends DbScheduler {
+
+    private static Db db = Db.use("group_def_spider");
+    private static final int FETCH_SIZE = 500;
+
+    @Override
+    public void resetDuplicateCheck(Task task) {
+        createTable(getTbName(task), true);
+    }
+
+    private String getTbName(Task task){
+        String URL_PREFIX = "LK_";
+        return URL_PREFIX + task.getUUID().toUpperCase();
+    }
+
+    @Override
+    public boolean isDuplicate(Request request, Task task) {
+        String tbName = getTbName(task);
+        String id = SecureUtil.md5(request.getUrl());
+        String sql = SysConstant.SPIDER_TABLE_URL_EXIST.replace("#TABLE#", tbName).replace("#ID#", id);
+        try {
+            return db.queryNumber(sql).intValue() > 0;
+        } catch (SQLException e) {
+            StaticLog.error(e);
+        }
+        return false;
+    }
+
+    public boolean bulkPush(Request[] requests, Task task){
+        if (requests.length <= 0){
+            return true;
+        }
+        List<Entity> entryList = new ArrayList<>();
+        String tbName = getTbName(task);
+        createTable(tbName, false);
+        for (Request request : requests) {
+            entryList.add(getEntity(tbName, request));
+        }
+        try {
+            db.insert(entryList);
+            return true;
+        } catch (SQLException e) {
+            StaticLog.error(e);
+        }
+        return false;
+    }
+
+    private Entity getEntity(String tbName, Request request){
+        String id = SecureUtil.md5(request.getUrl());
+        Entity entity = Entity.create(tbName);
+        entity.set("ID", id).set("URL", request.getUrl())
+                .set("PRIORITY", (int)request.getPriority())
+                .set("REQ_STA", 0).set("UPDATE_DTM", new Date())
+                .set("REQUEST", Base64Encoder.encode(JSON.toJSONBytes(request)));
+        return entity;
+    }
+
+    @Override
+    public int getLeftRequestsCount(Task task) {
+        String tbName = getTbName(task);
+        try {
+            String sql = SysConstant.SPIDER_TABLE_LEFT_NUM.replace("#TABLE#", tbName);
+            return db.queryNumber(sql).intValue();
+        } catch (SQLException e) {
+            StaticLog.error(e);
+        }
+        return 0;
+    }
+
+    @Override
+    public int getTotalRequestsCount(Task task) {
+        String tbName = getTbName(task);
+        try {
+            String sql = SysConstant.SPIDER_TABLE_TOTAL_NUM.replace("#TABLE#", tbName);
+            return db.queryNumber(sql).intValue();
+        } catch (SQLException e) {
+            StaticLog.error(e);
+        }
+        return 0;
+    }
+
+
+    public List<Request> fetchRequest(Task task) {
+        clearConsumedRequest(task);
+        List<Request> requestList = new ArrayList<>();
+        String tbName = getTbName(task);
+        try {
+            createTable(tbName, false);
+            String sql = SysConstant.SPIDER_TABLE_QUERY_LEFT.replace("#TABLE#", tbName).replace("#SIZE#", String.valueOf(FETCH_SIZE));
+            List<Entity> entityList = db.query(sql);
+            if (entityList == null || entityList.size() <= 0) {
+                if (isQueueHasValue()){
+                    pushWhenNoDuplicate(null, task);
+                    return fetchRequest(task);
+                }
+                return requestList;
+            }
+            for (Entity entity : entityList) {
+                String reqBin = entity.getStr("REQUEST");
+                requestList.add(JSON.parseObject(Base64Decoder.decodeStr(reqBin), Request.class));
+            }
+            return requestList;
+        } catch (Exception e) {
+            StaticLog.error(e);
+        }
+        return null;
+    }
+
+    public void clearConsumedRequest(Task task) {
+        if (hasConsumed == null || hasConsumed.size() <= 0){
+            return;
+        }
+        String tbName = getTbName(task);
+        createTable(tbName, false);
+        StringBuilder sqlBuilder = new StringBuilder();
+        for (Request request : hasConsumed) {
+            String id = SecureUtil.md5(request.getUrl());
+            sqlBuilder.append(SysConstant.SPIDER_TABLE_UPDATE_URL.replace("#TABLE#", tbName).replace("#ID#", id));
+        }
+        try {
+            db.execute(sqlBuilder.toString());
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void createTable(String tableName, boolean reCreate){
+        String sql = (reCreate ? SysConstant.SPIDER_TABLE_RECREATE : SysConstant.SPIDER_TABLE_CREATE).replace("#TABLE#", tableName);
+        try {
+            db.execute(sql);
+        } catch (SQLException e) {
+            StaticLog.error(e);
+        }
+    }
+
+}

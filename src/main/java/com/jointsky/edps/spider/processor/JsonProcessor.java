@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import cn.hutool.log.StaticLog;
+import com.alibaba.fastjson.JSON;
 import com.jointsky.edps.spider.common.SelectType;
 import com.jointsky.edps.spider.common.SysConstant;
 import com.jointsky.edps.spider.config.*;
@@ -47,6 +48,12 @@ public class JsonProcessor implements PageProcessor {
     public void process(Page page) {
         Request request = page.getRequest();
         Object extra = request.getExtra(SysConstant.PAGE_SETTING);
+        if (extra instanceof com.alibaba.fastjson.JSONObject){
+            com.alibaba.fastjson.JSONObject extraJson = (com.alibaba.fastjson.JSONObject)extra;
+            if (extraJson.containsKey("targetSelect")){
+                extra = JSON.parseObject(JSON.toJSONString(extraJson), PageConfig.class);
+            }
+        }
         if (!(extra instanceof PageConfig)) {
             StaticLog.error("未知链接：" + request.getUrl());
             page.setSkip(true);

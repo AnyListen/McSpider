@@ -15,7 +15,9 @@ public class FieldSelectConfig implements Serializable {
     private SelectType selectType;
     private int group = 0;
 
-    public FieldSelectConfig(){}
+    public FieldSelectConfig(){
+
+    }
 
     public FieldSelectConfig(String filedName, String configText, SelectType selectType) {
         this.filedName = filedName;

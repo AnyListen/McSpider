@@ -16,6 +16,10 @@ public class HelpSelectConfig extends UrlSelectConfig implements Serializable {
     private FieldSelectConfig totalFieldSelect;
     private List<FieldSelectConfig> pathCombineParams;
 
+    public HelpSelectConfig(){
+        super();
+    }
+
     public HelpSelectConfig(boolean jsonType, String configText, SelectType selectType) {
         super(jsonType, configText, selectType);
         this.pathCombineParams = new ArrayList<>();

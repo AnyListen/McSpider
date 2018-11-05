@@ -2,6 +2,8 @@ package com.jointsky.edps.spider.processor;
 
 import cn.hutool.bloomfilter.BitMapBloomFilter;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.db.Db;
+import cn.hutool.db.Entity;
 import cn.hutool.log.StaticLog;
 import com.jointsky.edps.spider.common.SelectType;
 import com.jointsky.edps.spider.common.SysConstant;
@@ -16,10 +18,8 @@ import us.codecraft.webmagic.selector.Html;
 import us.codecraft.webmagic.selector.Json;
 import us.codecraft.webmagic.selector.Selectable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.sql.SQLException;
+import java.util.*;
 
 /**
  * edps-spider
@@ -98,8 +98,9 @@ public class JsonProcessorTest {
         leaderHelpPage.setNextHelpConfig(targetHtmlPage);
         startConfig.setNextHelpConfig(leaderHelpPage);
 
-        SiteConfig siteConfig = new SiteConfig("xh-leader", "新华网-领导讲话");
-        siteConfig.setCharset("UTF-8").setExitWhenComplete(true).setStartPage(startConfig);
+        SiteConfig siteConfig = new SiteConfig("xh_leader", "新华网-领导讲话");
+        siteConfig.setCharset("UTF-8").setExitWhenComplete(true).setStartPage(startConfig)
+                .setScheduler("com.jointsky.edps.spider.scheduler.H2Scheduler");
         Map<String, Object> startUrls = siteConfig.getStartPage().getUrls();
         if (startUrls == null || startUrls.size() <=0){
             StaticLog.error("请设置起始页！");
@@ -121,37 +122,36 @@ public class JsonProcessorTest {
 
     @Test
     public void testH2(){
-//        String tbName = "spider_xh".toUpperCase();
-//        System.out.println(H2Helper.createTable(tbName, true));
-//        System.out.println(H2Helper.isTableExits(tbName));
-//        Entity entity = Entity.create(tbName);
-//        entity.set("ID", "234141321")
-//                .set("URL", "fbgfdb")
-//                .set("PRIORITY", 1)
-//                .set("REQ_STA", 1)
-//                .set("CREATE_DTM", new Date())
-//                .set("DONE_DTM", new Date())
-//                .set("REQUEST", "{}")
-//        ;
-//
-//        try {
-//            int insert = H2Helper.getDb().insert(entity);
-//            System.out.println(insert);
-//
-//            List<Entity> list = H2Helper.getDb().find(Entity.create(tbName));
-//            System.out.println(list);
-//
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//        }
+        Db db = Db.use("group_def_spider");
+        String tbName = "spider_xh".toUpperCase();
+        Entity entity = Entity.create(tbName);
+        entity.set("ID", "2341413255541")
+                .set("URL", "fbgfdb")
+                .set("PRIORITY", 1)
+                .set("REQ_STA", 1)
+                .set("CREATE_DTM", new Date())
+                .set("DONE_DTM", new Date())
+                .set("REQUEST", "{}")
+        ;
 
-        BitMapBloomFilter filter = new BitMapBloomFilter(100000000);
-        filter.add("123");
-        filter.add("abc");
-        filter.add("ddd");
+        try {
+            int insert = db.insert(entity);
+            System.out.println(insert);
 
-        Assert.assertTrue(filter.contains("abc"));
-        Assert.assertTrue(filter.contains("ddd"));
-        Assert.assertTrue(filter.contains("123"));
+            List<Entity> list = db.find(Entity.create(tbName));
+            System.out.println(list);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+//        BitMapBloomFilter filter = new BitMapBloomFilter(100000000);
+//        filter.add("123");
+//        filter.add("abc");
+//        filter.add("ddd");
+//
+//        Assert.assertTrue(filter.contains("abc"));
+//        Assert.assertTrue(filter.contains("ddd"));
+//        Assert.assertTrue(filter.contains("123"));
     }
 }

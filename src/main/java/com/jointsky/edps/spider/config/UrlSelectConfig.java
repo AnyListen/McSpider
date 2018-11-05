@@ -14,6 +14,8 @@ public class UrlSelectConfig implements Serializable {
     private String configText;
     private SelectType selectType;
 
+    public UrlSelectConfig(){}
+
     public UrlSelectConfig(String configText, SelectType selectType) {
         this.jsonType = false;
         this.configText = configText;

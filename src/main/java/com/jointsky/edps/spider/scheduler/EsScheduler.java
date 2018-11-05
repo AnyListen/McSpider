@@ -27,37 +27,18 @@ import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
 import org.elasticsearch.search.sort.SortOrder;
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Task;
-import us.codecraft.webmagic.scheduler.DuplicateRemovedScheduler;
-import us.codecraft.webmagic.scheduler.MonitorableScheduler;
-import us.codecraft.webmagic.scheduler.component.DuplicateRemover;
-import us.codecraft.webmagic.utils.NumberUtils;
 
 import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
 
 /**
  * edps-spider
  * edps-spider
  * Created by hezl on 2018-10-26.
  */
-public class EsScheduler extends DuplicateRemovedScheduler implements MonitorableScheduler, DuplicateRemover {
+public class EsScheduler extends DbScheduler {
 
-    private static final int INITIAL_CAPACITY = 50;
-    private static final int BULK_SIZE = 50;
     private static final int FETCH_SIZE = 500;
-
-    private List<Request> toBeConsumed= new ArrayList<>(FETCH_SIZE);
-    private List<Request> hasConsumed= new ArrayList<>(FETCH_SIZE);
-    private final String URL_PREFIX = "lk_";
     private RestHighLevelClient client;
-
-    private BlockingQueue<Request> noPriorityQueue = new LinkedBlockingQueue<>();
-
-    private PriorityBlockingQueue<Request> priorityQueuePlus = new PriorityBlockingQueue<>(INITIAL_CAPACITY, (o1, o2) -> -NumberUtils.compareLong(o1.getPriority(), o2.getPriority()));
-
-    private PriorityBlockingQueue<Request> priorityQueueMinus = new PriorityBlockingQueue<>(INITIAL_CAPACITY, (o1, o2) -> -NumberUtils.compareLong(o1.getPriority(), o2.getPriority()));
 
     public EsScheduler(RestHighLevelClient client) {
         this.client = client;
@@ -84,12 +65,13 @@ public class EsScheduler extends DuplicateRemovedScheduler implements Monitorabl
     }
 
     private String getIndexName(Task task){
-        return URL_PREFIX + task.getUUID().toUpperCase();
+        String URL_PREFIX = "lk_";
+        return URL_PREFIX + task.getUUID().toLowerCase();
     }
 
     @Override
     public boolean isDuplicate(Request request, Task task) {
-        GetRequest getRequest = buildGetRequest(task.getUUID(), request);
+        GetRequest getRequest = buildGetRequest(getIndexName(task), request);
         try {
             return client.exists(getRequest, RequestOptions.DEFAULT);
         } catch (Exception e) {
@@ -98,37 +80,7 @@ public class EsScheduler extends DuplicateRemovedScheduler implements Monitorabl
         return false;
     }
 
-    @Override
-    protected synchronized void pushWhenNoDuplicate(Request request, Task task) {
-        int size = request == null ? 1 : BULK_SIZE;
-        if (noPriorityQueue.size() >= size){
-            clearQueue(noPriorityQueue, task);
-        }
-        if (priorityQueuePlus.size() >= size){
-            clearQueue(noPriorityQueue, task);
-        }
-        if (priorityQueueMinus.size() >= size){
-            clearQueue(noPriorityQueue, task);
-        }
-        if (request != null){
-            if (request.getPriority() == 0) {
-                noPriorityQueue.add(request);
-            } else if (request.getPriority() > 0) {
-                priorityQueuePlus.put(request);
-            } else {
-                priorityQueueMinus.put(request);
-            }
-        }
-    }
-
-    private void clearQueue(Queue<Request> queue, Task task){
-        Request[] requests = queue.toArray(new Request[0]);
-        if (bulkPush(requests, task)){
-            queue.clear();
-        }
-    }
-
-    private boolean bulkPush(Request[] requests, Task task){
+    public boolean bulkPush(Request[] requests, Task task){
         if (requests.length <= 0){
             return true;
         }
@@ -163,8 +115,7 @@ public class EsScheduler extends DuplicateRemovedScheduler implements Monitorabl
         return false;
     }
 
-    private GetRequest buildGetRequest(String uuid, Request request) {
-        String indexName = URL_PREFIX + uuid.toUpperCase();
+    private GetRequest buildGetRequest(String indexName, Request request) {
         String id = SecureUtil.md5(request.getUrl());
         GetRequest getRequest = new GetRequest(indexName, "doc", id);
         getRequest.fetchSourceContext(new FetchSourceContext(false));
@@ -206,22 +157,7 @@ public class EsScheduler extends DuplicateRemovedScheduler implements Monitorabl
         return 0;
     }
 
-    @Override
-    public synchronized Request poll(Task task) {
-        if (toBeConsumed == null || toBeConsumed.size() <= 0){
-            toBeConsumed = fetchRequest(task);
-        }
-        if (toBeConsumed == null || toBeConsumed.size() <= 0){
-            return null;
-        }
-        Request request = toBeConsumed.remove(0);
-        if (request != null){
-            hasConsumed.add(request);
-        }
-        return request;
-    }
-
-    private List<Request> fetchRequest(Task task) {
+    public List<Request> fetchRequest(Task task) {
         clearConsumedRequest(task);
         List<Request> requestList = new ArrayList<>();
         String indexName = getIndexName(task);
@@ -234,7 +170,7 @@ public class EsScheduler extends DuplicateRemovedScheduler implements Monitorabl
             SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
             SearchHit[] hits = searchResponse.getHits().getHits();
             if (hits == null || hits.length <= 0) {
-                if (noPriorityQueue.size() > 0 || priorityQueuePlus.size() > 0 || priorityQueueMinus.size() > 0){
+                if (isQueueHasValue()){
                     pushWhenNoDuplicate(null, task);
                     return fetchRequest(task);
                 }
@@ -242,7 +178,7 @@ public class EsScheduler extends DuplicateRemovedScheduler implements Monitorabl
             }
             for (SearchHit hit : hits) {
                 String reqBin = hit.getSource().get("req_bin").toString();
-                requestList.add(JSON.parseObject(Base64Decoder.decode(reqBin), Request.class));
+                requestList.add(JSON.parseObject(Base64Decoder.decodeStr(reqBin), Request.class));
             }
             return requestList;
 
@@ -252,7 +188,7 @@ public class EsScheduler extends DuplicateRemovedScheduler implements Monitorabl
         return null;
     }
 
-    private void clearConsumedRequest(Task task) {
+    public void clearConsumedRequest(Task task) {
         if (hasConsumed == null || hasConsumed.size() <= 0){
             return;
         }
