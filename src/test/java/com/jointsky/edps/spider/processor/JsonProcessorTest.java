@@ -1,5 +1,6 @@
 package com.jointsky.edps.spider.processor;
 
+import cn.hutool.bloomfilter.BitMapBloomFilter;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.log.StaticLog;
 import com.jointsky.edps.spider.common.SelectType;
@@ -7,6 +8,7 @@ import com.jointsky.edps.spider.common.SysConstant;
 import com.jointsky.edps.spider.config.*;
 import com.jointsky.edps.spider.extractor.ExtractorConfig;
 import com.jointsky.edps.spider.utils.SpiderUtils;
+import org.junit.Assert;
 import org.junit.Test;
 import us.codecraft.webmagic.Spider;
 import us.codecraft.webmagic.downloader.HttpClientDownloader;
@@ -115,5 +117,41 @@ public class JsonProcessorTest {
         Selectable jsonPath = json.jsonPath("$.hotList.itemList[0].detailUrl");
         List<String> all = jsonPath.all();
         System.out.println(all);
+    }
+
+    @Test
+    public void testH2(){
+//        String tbName = "spider_xh".toUpperCase();
+//        System.out.println(H2Helper.createTable(tbName, true));
+//        System.out.println(H2Helper.isTableExits(tbName));
+//        Entity entity = Entity.create(tbName);
+//        entity.set("ID", "234141321")
+//                .set("URL", "fbgfdb")
+//                .set("PRIORITY", 1)
+//                .set("REQ_STA", 1)
+//                .set("CREATE_DTM", new Date())
+//                .set("DONE_DTM", new Date())
+//                .set("REQUEST", "{}")
+//        ;
+//
+//        try {
+//            int insert = H2Helper.getDb().insert(entity);
+//            System.out.println(insert);
+//
+//            List<Entity> list = H2Helper.getDb().find(Entity.create(tbName));
+//            System.out.println(list);
+//
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//        }
+
+        BitMapBloomFilter filter = new BitMapBloomFilter(100000000);
+        filter.add("123");
+        filter.add("abc");
+        filter.add("ddd");
+
+        Assert.assertTrue(filter.contains("abc"));
+        Assert.assertTrue(filter.contains("ddd"));
+        Assert.assertTrue(filter.contains("123"));
     }
 }

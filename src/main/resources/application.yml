@@ -6,3 +6,6 @@ spring:
     cache: false
   resources:
     static-locations: [ "classpath:/static/"]
+  h2:
+    console:
+      enabled: true
