@@ -99,7 +99,7 @@ public abstract class DbScheduler extends DuplicateRemovedScheduler implements M
 
     public abstract void clearConsumedRequest(Task task);
 
-    public boolean isQueueHasValue(){
+    boolean isQueueHasValue(){
         return noPriorityQueue.size() > 0 || priorityQueuePlus.size() > 0 || priorityQueueMinus.size() > 0;
     }
 }

@@ -1,6 +1,5 @@
 package com.jointsky.edps.spider.processor;
 
-import cn.hutool.bloomfilter.BitMapBloomFilter;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.db.Db;
 import cn.hutool.db.Entity;
@@ -10,7 +9,6 @@ import com.jointsky.edps.spider.common.SysConstant;
 import com.jointsky.edps.spider.config.*;
 import com.jointsky.edps.spider.extractor.ExtractorConfig;
 import com.jointsky.edps.spider.utils.SpiderUtils;
-import org.junit.Assert;
 import org.junit.Test;
 import us.codecraft.webmagic.Spider;
 import us.codecraft.webmagic.downloader.HttpClientDownloader;
@@ -99,7 +97,8 @@ public class JsonProcessorTest {
         startConfig.setNextHelpConfig(leaderHelpPage);
 
         SiteConfig siteConfig = new SiteConfig("xh_leader", "新华网-领导讲话");
-        siteConfig.setCharset("UTF-8").setExitWhenComplete(true).setStartPage(startConfig)
+        siteConfig.setCharset("UTF-8").setExitWhenComplete(true)
+                .setStartPage(startConfig).setThreadNum(5)
                 .setScheduler("com.jointsky.edps.spider.scheduler.H2Scheduler");
         Map<String, Object> startUrls = siteConfig.getStartPage().getUrls();
         if (startUrls == null || startUrls.size() <=0){

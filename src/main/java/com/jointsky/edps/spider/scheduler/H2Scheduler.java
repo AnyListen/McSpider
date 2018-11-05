@@ -12,9 +12,7 @@ import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Task;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * edps-spider
@@ -25,6 +23,7 @@ public class H2Scheduler extends DbScheduler {
 
     private static Db db = Db.use("group_def_spider");
     private static final int FETCH_SIZE = 500;
+    private Set<String> tabSet = new HashSet<>();
 
     @Override
     public void resetDuplicateCheck(Task task) {
@@ -39,6 +38,10 @@ public class H2Scheduler extends DbScheduler {
     @Override
     public boolean isDuplicate(Request request, Task task) {
         String tbName = getTbName(task);
+        if (!tabSet.contains(tbName)){
+            createTable(tbName, false);
+            tabSet.add(tbName);
+        }
         String id = SecureUtil.md5(request.getUrl());
         String sql = SysConstant.SPIDER_TABLE_URL_EXIST.replace("#TABLE#", tbName).replace("#ID#", id);
         try {
@@ -55,7 +58,6 @@ public class H2Scheduler extends DbScheduler {
         }
         List<Entity> entryList = new ArrayList<>();
         String tbName = getTbName(task);
-        createTable(tbName, false);
         for (Request request : requests) {
             entryList.add(getEntity(tbName, request));
         }
@@ -108,7 +110,6 @@ public class H2Scheduler extends DbScheduler {
         List<Request> requestList = new ArrayList<>();
         String tbName = getTbName(task);
         try {
-            createTable(tbName, false);
             String sql = SysConstant.SPIDER_TABLE_QUERY_LEFT.replace("#TABLE#", tbName).replace("#SIZE#", String.valueOf(FETCH_SIZE));
             List<Entity> entityList = db.query(sql);
             if (entityList == null || entityList.size() <= 0) {
@@ -134,7 +135,6 @@ public class H2Scheduler extends DbScheduler {
             return;
         }
         String tbName = getTbName(task);
-        createTable(tbName, false);
         StringBuilder sqlBuilder = new StringBuilder();
         for (Request request : hasConsumed) {
             String id = SecureUtil.md5(request.getUrl());
